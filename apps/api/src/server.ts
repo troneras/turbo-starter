@@ -1,5 +1,4 @@
 import { buildApp } from './app.js'
-import { logger } from './lib/logger.js'
 
 const start = async () => {
     try {
@@ -10,19 +9,19 @@ const start = async () => {
 
         await app.listen({ port, host })
 
-        logger.info(`Server listening on http://${host}:${port}`)
+        app.log.info(`Server listening on http://${host}:${port}`)
 
         // Graceful shutdown
         const signals = ['SIGINT', 'SIGTERM']
         signals.forEach(signal => {
             process.on(signal, async () => {
-                logger.info(`Received ${signal}, shutting down gracefully...`)
+                app.log.info(`Received ${signal}, shutting down gracefully...`)
                 await app.close()
                 process.exit(0)
             })
         })
     } catch (err) {
-        logger.error(err)
+        console.error(err)
         process.exit(1)
     }
 }

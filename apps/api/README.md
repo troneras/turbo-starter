@@ -80,7 +80,7 @@ bun run build
 bun run start
 
 # Start the worker (in a separate process)
-node dist/worker.js
+bun run worker
 ```
 
 ## API Endpoints
@@ -156,7 +156,7 @@ RATE_LIMIT_WINDOW=1 minute
 bun test
 
 # Run tests in watch mode
-bun test:watch
+bun test --watch
 ```
 
 ## Type Checking

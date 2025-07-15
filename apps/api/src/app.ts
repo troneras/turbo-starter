@@ -1,15 +1,15 @@
-import Fastify, { FastifyInstance } from 'fastify'
+import Fastify, { type FastifyInstance } from 'fastify'
 import autoload from '@fastify/autoload'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
-import { logger } from './lib/logger.js'
+import { getLoggerConfig } from './lib/logger.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = join(__filename, '..')
 
 export async function buildApp(opts = {}): Promise<FastifyInstance> {
     const app = Fastify({
-        logger,
+        logger: getLoggerConfig(),
         ...opts
     })
 

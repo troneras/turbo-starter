@@ -1,4 +1,4 @@
-import { FastifyPluginAsync } from 'fastify'
+import { type FastifyPluginAsync } from 'fastify'
 
 const home: FastifyPluginAsync = async (fastify) => {
     fastify.get('/', {

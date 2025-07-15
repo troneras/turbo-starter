@@ -1,5 +1,3 @@
-import { FastifyInstance } from 'fastify'
-
 export const envSchema = {
     type: 'object',
     required: ['DATABASE_URL', 'JWT_SECRET'],
