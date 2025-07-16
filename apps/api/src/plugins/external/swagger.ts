@@ -26,7 +26,10 @@ export default fp(async function (fastify) {
                 { name: 'flags', description: 'Feature flag endpoints' },
                 { name: 'workflow', description: 'Workflow management endpoints' },
                 { name: 'cms', description: 'CMS content endpoints' },
-                { name: 'seo', description: 'SEO metadata endpoints' }
+                { name: 'seo', description: 'SEO metadata endpoints' },
+                { name: 'auth', description: 'Authentication endpoints' },
+                { name: 'health', description: 'Health check endpoints' },
+                { name: 'users', description: 'User management endpoints' }
             ],
             securityDefinitions: {
                 apiKey: {

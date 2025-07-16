@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { 
-    LoginRequestSchema, 
-    LoginResponseSchema, 
+import {
+    LoginRequestSchema,
+    LoginResponseSchema,
     UnauthorizedErrorSchema,
     BadRequestErrorSchema,
-    type LoginRequest 
+    type LoginRequest
 } from "../../../schemas/auth.js";
 
 export default async function (fastify: FastifyInstance) {
@@ -22,19 +22,19 @@ export default async function (fastify: FastifyInstance) {
         }
     }, async (request, reply) => {
         const { azure_token, service_token } = request.body as LoginRequest
-        
+
         // Validate that only one token type is provided (business logic validation)
         if (azure_token && service_token) {
             return reply.badRequest('Cannot provide both azure_token and service_token')
         }
-        
+
         if (!azure_token && !service_token) {
             return reply.badRequest('Must provide either azure_token or service_token')
         }
-        
+
         try {
             let authResult
-            
+
             if (azure_token) {
                 // Use Azure AD auth service
                 authResult = await fastify.auth.validateAzureToken(azure_token)
@@ -42,10 +42,10 @@ export default async function (fastify: FastifyInstance) {
                 // Use service token auth
                 authResult = await fastify.auth.validateServiceToken(service_token!)
             }
-            
+
             // Generate JWT for our API
             const jwt = await fastify.auth.generateJWT(authResult)
-            
+
             return {
                 jwt,
                 user: authResult.user,

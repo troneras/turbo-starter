@@ -1,5 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox"
-import { 
+import {
     ErrorResponseSchema,
     UnauthorizedErrorSchema,
     ForbiddenErrorSchema,
@@ -33,12 +33,16 @@ export const GetMeResponseSchema = Type.Object({
     user: UserSchema,
     roles: Type.Array(Type.String()),
     permissions: Type.Array(Type.String())
+}, {
+    description: 'Current user information with roles and permissions'
 })
 
 // GET / query parameters schema
 export const ListUsersQuerySchema = Type.Object({
-    page: Type.Optional(Type.Number({ default: 1 })),
-    pageSize: Type.Optional(Type.Number({ default: 20 }))
+    page: Type.Optional(Type.Number({ default: 1, description: 'Page number for pagination (starts at 1)' })),
+    pageSize: Type.Optional(Type.Number({ default: 20, description: 'Number of users per page (max 100)' }))
+}, {
+    description: 'Query parameters for listing users with pagination'
 })
 
 // GET / response schema
@@ -47,15 +51,18 @@ export const ListUsersResponseSchema = Type.Object({
     total: Type.Number(),
     page: Type.Number(),
     pageSize: Type.Number()
+}, {
+    description: 'Paginated list of users with their roles'
 })
 
 // POST / request schema
 export const CreateUserRequestSchema = Type.Object({
-    email: Type.String({ format: 'email' }),
-    name: Type.String(),
-    roles: Type.Optional(Type.Array(Type.String(), { default: ['user'] }))
+    email: Type.String({ format: 'email', description: 'User email address (must be valid email format)' }),
+    name: Type.String({ description: 'Full name of the user' }),
+    roles: Type.Optional(Type.Array(Type.String(), { default: ['user'], description: 'Array of role names to assign to the user' }))
 }, {
-    additionalProperties: false
+    additionalProperties: false,
+    description: 'Request body for creating a new user'
 })
 
 // POST / response schema
@@ -64,20 +71,25 @@ export const CreateUserResponseSchema = Type.Object({
     email: Type.String(),
     name: Type.String(),
     roles: Type.Array(Type.String())
+}, {
+    description: 'Successfully created user with assigned roles'
 })
 
 // PATCH /:id params schema
 export const UpdateUserParamsSchema = Type.Object({
-    id: Type.String()
+    id: Type.String({ description: 'Unique identifier of the user to update' })
+}, {
+    description: 'Path parameters for updating a user'
 })
 
 // PATCH /:id request schema
 export const UpdateUserRequestSchema = Type.Object({
-    name: Type.Optional(Type.String()),
-    email: Type.Optional(Type.String({ format: 'email' })),
-    roles: Type.Optional(Type.Array(Type.String()))
+    name: Type.Optional(Type.String({ description: 'Updated full name of the user' })),
+    email: Type.Optional(Type.String({ format: 'email', description: 'Updated email address (must be valid email format)' })),
+    roles: Type.Optional(Type.Array(Type.String(), { description: 'Updated array of role names for the user' }))
 }, {
-    additionalProperties: false
+    additionalProperties: false,
+    description: 'Request body for updating user information (all fields are optional)'
 })
 
 // PATCH /:id response schema
@@ -86,15 +98,19 @@ export const UpdateUserResponseSchema = Type.Object({
     email: Type.String(),
     name: Type.String(),
     roles: Type.Array(Type.String())
+}, {
+    description: 'Successfully updated user information'
 })
 
 // DELETE /:id params schema
 export const DeleteUserParamsSchema = Type.Object({
-    id: Type.String()
+    id: Type.String({ description: 'Unique identifier of the user to delete' })
+}, {
+    description: 'Path parameters for deleting a user'
 })
 
 // Re-export common schemas
-export { 
+export {
     ErrorResponseSchema,
     UnauthorizedErrorSchema,
     ForbiddenErrorSchema,
