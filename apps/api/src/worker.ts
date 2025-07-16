@@ -3,6 +3,7 @@ import serviceApp, { options } from './app.js'
 import type { FastifyInstance } from 'fastify'
 import Fastify from 'fastify'
 import fp from 'fastify-plugin'
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
 
 interface Job {
     id: string
@@ -22,7 +23,7 @@ class Worker {
             this.app = Fastify({
                 logger: getLoggerConfig(),
                 ...options
-            })
+            }).withTypeProvider<TypeBoxTypeProvider>()
             this.app.register(fp(serviceApp))
             await this.app.ready()
             this.isRunning = true

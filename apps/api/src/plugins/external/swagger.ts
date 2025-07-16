@@ -33,6 +33,11 @@ export default fp(async function (fastify) {
                     type: 'apiKey',
                     name: 'Authorization',
                     in: 'header'
+                },
+                bearerAuth: {
+                    type: 'apiKey',
+                    name: 'Authorization',
+                    in: 'header'
                 }
             }
         }

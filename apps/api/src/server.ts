@@ -3,11 +3,12 @@ import serviceApp, { options } from './app.js'
 import Fastify from 'fastify'
 import fp from 'fastify-plugin'
 import closeWithGrace from 'close-with-grace'
+import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
 
 const app = Fastify({
     logger: getLoggerConfig(),
     ...options
-})
+}).withTypeProvider<TypeBoxTypeProvider>()
 
 const init = async () => {
 

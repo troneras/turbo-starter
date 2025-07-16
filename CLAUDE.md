@@ -77,6 +77,8 @@ Multi-tenant architecture supporting:
 - Health check endpoint at `/health`
 - Auto-generated OpenAPI docs at `/documentation`
 - Webhook endpoints for external integrations
+- **TypeBox** for schema validation and type generation
+- Schema organization in `schemas/` directory with common reusable schemas
 
 ## Development Environment
 
@@ -117,6 +119,52 @@ Multi-tenant architecture supporting:
 - Type checking: `bun run check-types`
 - Linting: `bun run lint`
 - Code formatting: `bun run format`
+
+## API Development Patterns
+
+### TypeBox Schema Organization
+- **Common schemas**: `schemas/common.ts` - Reusable schemas like `ErrorResponseSchema`
+- **Domain schemas**: `schemas/{domain}.ts` - Domain-specific request/response schemas
+- **Inline structure**: Keep schema definition visible in route handlers for clarity
+
+### Route Structure Best Practices
+```typescript
+import type { FastifyInstance } from "fastify";
+import { 
+    RequestSchema, 
+    ResponseSchema, 
+    ErrorResponseSchema,
+    type RequestType 
+} from "../../../schemas/domain.js";
+
+export default async function (fastify: FastifyInstance) {
+    fastify.post('/endpoint', {
+        schema: {
+            tags: ['domain'],
+            summary: 'Clear description',
+            body: RequestSchema,
+            response: {
+                200: ResponseSchema,
+                400: ErrorResponseSchema,
+                401: ErrorResponseSchema
+            }
+        }
+    }, async (request, reply) => {
+        const data = request.body as RequestType
+        // Handler implementation
+    })
+}
+```
+
+### TypeBox Integration
+- Use `@sinclair/typebox` with `@fastify/type-provider-typebox`
+- Generate TypeScript types with `Static<typeof Schema>`
+- Maintain separation between schema validation and business logic validation
+- Leverage Fastify's automatic validation for basic schema rules
+
+### Custom Commands
+- `/refactor-api-endpoint` - Refactor existing endpoints to use TypeBox
+- `/write-api-route` - Create new API routes following best practices
 
 ## Deployment
 

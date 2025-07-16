@@ -49,6 +49,7 @@ Our goal: **Empower teams to move fast and safely, with transparency and flexibi
 
 - **Node.js 18+ / Bun** — Fast builds, modern TS, ESM.
 - **Fastify** — High-performance API framework.
+- **TypeBox** — Schema validation and TypeScript type generation.
 - **PostgreSQL** — Scalable, relational source of truth.
 - **Redis** — Caching, job queue, speed.
 - **Drizzle ORM** — Type-safe, SQL-first migrations and queries.
@@ -106,6 +107,9 @@ bun run --filter=db seed
 ## 📦 **Project Structure Reference**
 
 - `apps/api/src/` — API, routes, plugins, worker
+  - `schemas/` — TypeBox schemas organized by domain + common reusable schemas
+  - `routes/api/` — Route handlers with inline schema definitions for clarity
+  - `plugins/` — Fastify plugins (external infrastructure + app business logic)
 - `packages/db/` — Migrations, schema, seeds
 
 ---
@@ -115,6 +119,12 @@ bun run --filter=db seed
 - Follow our [commit style](#).
 - Run `bun test` and `bun run check-types` before submitting PRs.
 - Open discussions for architectural proposals or major migrations.
+
+### API Development
+- Use custom commands for consistent patterns:
+  - `/refactor-api-endpoint` - Refactor existing endpoints to use TypeBox
+  - `/write-api-route` - Create new API routes following best practices
+- Follow TypeBox schema organization patterns (see `CLAUDE.md` for details)
 
 ---
 

@@ -1,4 +1,10 @@
 import type { FastifyInstance } from "fastify";
+import { 
+    LoginRequestSchema, 
+    LoginResponseSchema, 
+    ErrorResponseSchema,
+    type LoginRequest 
+} from "../../../schemas/auth.js";
 
 export default async function (fastify: FastifyInstance) {
     // Login endpoint - exchange Azure AD token or service token for JWT
@@ -6,55 +12,17 @@ export default async function (fastify: FastifyInstance) {
         schema: {
             tags: ['auth'],
             summary: 'Login with Azure AD or service token',
-            body: {
-                type: 'object',
-                properties: {
-                    azure_token: { type: 'string' },
-                    service_token: { type: 'string' }
-                },
-                additionalProperties: false
-            },
+            body: LoginRequestSchema,
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        jwt: { type: 'string' },
-                        user: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'string' },
-                                email: { type: 'string' },
-                                name: { type: 'string' }
-                            }
-                        },
-                        roles: {
-                            type: 'array',
-                            items: { type: 'string' }
-                        },
-                        permissions: {
-                            type: 'array',
-                            items: { type: 'string' }
-                        }
-                    }
-                },
-                400: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                },
-                401: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                }
+                200: LoginResponseSchema,
+                400: ErrorResponseSchema,
+                401: ErrorResponseSchema
             }
         }
     }, async (request, reply) => {
-        const { azure_token, service_token } = request.body as { azure_token?: string; service_token?: string }
+        const { azure_token, service_token } = request.body as LoginRequest
         
-        // Validate that only one token type is provided
+        // Validate that only one token type is provided (business logic validation)
         if (azure_token && service_token) {
             return reply.code(400).send({ error: 'Cannot provide both azure_token and service_token' })
         }

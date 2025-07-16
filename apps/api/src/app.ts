@@ -1,8 +1,7 @@
-import Fastify, { type FastifyInstance, type FastifyPluginOptions } from 'fastify'
+import { type FastifyInstance, type FastifyPluginOptions } from 'fastify'
 import autoload from '@fastify/autoload'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
-
 
 
 export const options: FastifyPluginOptions = {
