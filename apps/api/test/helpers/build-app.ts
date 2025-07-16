@@ -39,6 +39,7 @@ export async function build(t?: TestContext) {
         serverOptions
     )) as FastifyInstance
 
+
     // This is after start, so we can't decorate the instance using `.decorate`
     // app.login = login
     // app.injectWithLogin = injectWithLogin

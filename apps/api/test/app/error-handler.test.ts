@@ -1,27 +1,29 @@
-import { it } from 'node:test'
-import assert from 'node:assert'
+import { it, describe, afterEach, expect, beforeEach } from 'bun:test'
 import fastify from 'fastify'
 import serviceApp from '../../src/app.js'
 import fp from 'fastify-plugin'
 
-it('should call errorHandler', async (t) => {
-    const app = fastify()
-    await app.register(fp(serviceApp))
+import { build } from '../helpers/build-app.js'
+describe('Error Handler', () => {
+    let app: any
 
-    app.get('/error', () => {
-        throw new Error('Kaboom!')
-    })
+    it('should call errorHandler', async () => {
+        app = fastify()
+        app.register(fp(serviceApp))
 
-    await app.ready()
+        app.get('/error', () => {
+            throw new Error('Kaboom!')
+        })
 
-    t.after(() => app.close())
+        await app.ready()
 
-    const res = await app.inject({
-        method: 'GET',
-        url: '/error'
-    })
+        const res = await app.inject({
+            method: 'GET',
+            url: '/error'
+        })
 
-    assert.deepStrictEqual(JSON.parse(res.payload), {
-        message: 'Internal Server Error'
+        expect(JSON.parse(res.payload)).toEqual({
+            message: 'Internal Server Error'
+        })
     })
 })
