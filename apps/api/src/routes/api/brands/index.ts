@@ -1,7 +1,21 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyInstance } from "fastify";
 import { brands as brandsTable, brandLocales, locales } from '@cms/db/schema'
-
+import {
+    BrandListResponseSchema,
+    BrandDetailResponseSchema,
+    CreateBrandRequestSchema,
+    CreateBrandResponseSchema,
+    BrandParamsSchema,
+    type CreateBrandRequest,
+    type BrandParams
+} from "../../../schemas/brands.js";
+import {
+    UnauthorizedErrorSchema,
+    NotFoundErrorSchema,
+    ConflictErrorSchema,
+    BadRequestErrorSchema
+} from "../../../schemas/common.js";
 
 export default async function (fastify: FastifyInstance) {
     // Get all brands
@@ -9,19 +23,10 @@ export default async function (fastify: FastifyInstance) {
         schema: {
             tags: ['brands'],
             summary: 'Get all brands',
-            security: [{ apiKey: [] }],
+            security: [{ bearerAuth: [] }],
             response: {
-                200: {
-                    type: 'array',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            id: { type: 'number' },
-                            name: { type: 'string' },
-                            description: { type: 'string', nullable: true }
-                        }
-                    }
-                }
+                200: BrandListResponseSchema,
+                401: UnauthorizedErrorSchema
             }
         },
         onRequest: [fastify.authenticate]
@@ -35,47 +40,17 @@ export default async function (fastify: FastifyInstance) {
         schema: {
             tags: ['brands'],
             summary: 'Get brand by ID',
-            security: [{ apiKey: [] }],
-            params: {
-                type: 'object',
-                properties: {
-                    id: { type: 'number' }
-                },
-                required: ['id']
-            },
+            security: [{ bearerAuth: [] }],
+            params: BrandParamsSchema,
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'number' },
-                        name: { type: 'string' },
-                        description: { type: 'string', nullable: true },
-                        locales: {
-                            type: 'array',
-                            items: {
-                                type: 'object',
-                                properties: {
-                                    id: { type: 'number' },
-                                    code: { type: 'string' },
-                                    name: { type: 'string' }
-                                }
-                            }
-                        }
-                    }
-                },
-                404: {
-                    type: 'object',
-                    properties: {
-                        statusCode: { type: 'number' },
-                        error: { type: 'string' },
-                        message: { type: 'string' }
-                    }
-                }
+                200: BrandDetailResponseSchema,
+                401: UnauthorizedErrorSchema,
+                404: NotFoundErrorSchema
             }
         },
         onRequest: [fastify.authenticate]
     }, async (request, reply) => {
-        const { id } = request.params as { id: number }
+        const { id } = request.params as BrandParams
 
         const brand = await fastify.db.select().from(brandsTable).where(eq(brandsTable.id, id)).limit(1)
 
@@ -103,49 +78,30 @@ export default async function (fastify: FastifyInstance) {
         schema: {
             tags: ['brands'],
             summary: 'Create new brand',
-            security: [{ apiKey: [] }],
-            body: {
-                type: 'object',
-                properties: {
-                    name: { type: 'string' },
-                    description: { type: 'string' }
-                },
-                required: ['name']
-            },
+            security: [{ bearerAuth: [] }],
+            body: CreateBrandRequestSchema,
             response: {
-                201: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'number' },
-                        name: { type: 'string' },
-                        description: { type: 'string', nullable: true }
-                    }
-                },
-                409: {
-                    type: 'object',
-                    properties: {
-                        statusCode: { type: 'number' },
-                        error: { type: 'string' },
-                        message: { type: 'string' }
-                    }
-                }
+                201: CreateBrandResponseSchema,
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                409: ConflictErrorSchema
             }
         },
         onRequest: [fastify.authenticate]
     }, async (request, reply) => {
-        const { name, description } = request.body as { name: string; description?: string }
+        const data = request.body as CreateBrandRequest
 
         try {
             const [brand] = await fastify.db
                 .insert(brandsTable)
-                .values({ name, description })
+                .values(data)
                 .returning()
 
             reply.code(201)
             return brand
         } catch (error: any) {
             if (error.code === '23505') { // Unique constraint violation
-                return reply.conflict(`Brand with name "${name}" already exists`)
+                return reply.conflict(`Brand with name "${data.name}" already exists`)
             }
             throw error
         }
