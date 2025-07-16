@@ -1,6 +1,8 @@
-import { logger } from './lib/logger.js'
-import { buildApp } from './app.js'
+import { getLoggerConfig, logger } from './lib/logger.js'
+import serviceApp, { options } from './app.js'
 import type { FastifyInstance } from 'fastify'
+import Fastify from 'fastify'
+import fp from 'fastify-plugin'
 
 interface Job {
     id: string
@@ -17,7 +19,12 @@ class Worker {
     async start() {
         try {
             // Build app instance for database and redis access
-            this.app = await buildApp()
+            this.app = Fastify({
+                logger: getLoggerConfig(),
+                ...options
+            })
+            this.app.register(fp(serviceApp))
+            await this.app.ready()
             this.isRunning = true
 
             logger.info('Worker started')

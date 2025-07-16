@@ -11,9 +11,6 @@ declare module 'fastify' {
 }
 
 export default fp(async function (fastify) {
-    // Wait for env plugin to load first
-    await fastify.after()
-
     const connectionString = fastify.config.DATABASE_URL
 
     // Create postgres client

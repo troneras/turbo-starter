@@ -4,6 +4,9 @@ export const users = pgTable('users', {
     id: uuid('id').primaryKey().defaultRandom(),
     email: varchar('email', { length: 255 }).unique().notNull(),
     name: varchar('name', { length: 255 }).notNull(),
+    azure_ad_oid: varchar('azure_ad_oid', { length: 255 }),
+    azure_ad_tid: varchar('azure_ad_tid', { length: 255 }),
+    last_login_at: timestamp('last_login_at'),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -128,6 +131,35 @@ export const translationKeyContexts = pgTable('translation_key_contexts', {
     primaryKey({ columns: [table.translationKeyId, table.contextId] }),
 ]);
 
+export const serviceTokens = pgTable('service_tokens', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    token_hash: varchar('token_hash', { length: 255 }).unique().notNull(),
+    scope: jsonb('scope').$type<string[]>().notNull(),
+    created_by: uuid('created_by').references(() => users.id).notNull(),
+    expires_at: timestamp('expires_at'),
+    last_used_at: timestamp('last_used_at'),
+    status: varchar('status', { length: 20 }).default('active').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const permissions = pgTable('permissions', {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 255 }).unique().notNull(),
+    description: text('description'),
+    resource: varchar('resource', { length: 100 }).notNull(),
+    action: varchar('action', { length: 100 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const rolePermissions = pgTable('role_permissions', {
+    roleId: integer('role_id').references(() => roles.id).notNull(),
+    permissionId: integer('permission_id').references(() => permissions.id).notNull(),
+}, (table) => [
+    primaryKey({ columns: [table.roleId, table.permissionId] }),
+]);
+
 // Type exports
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -173,3 +205,12 @@ export type NewContext = typeof contexts.$inferInsert
 
 export type TranslationKeyContext = typeof translationKeyContexts.$inferSelect
 export type NewTranslationKeyContext = typeof translationKeyContexts.$inferInsert
+
+export type ServiceToken = typeof serviceTokens.$inferSelect
+export type NewServiceToken = typeof serviceTokens.$inferInsert
+
+export type Permission = typeof permissions.$inferSelect
+export type NewPermission = typeof permissions.$inferInsert
+
+export type RolePermission = typeof rolePermissions.$inferSelect
+export type NewRolePermission = typeof rolePermissions.$inferInsert

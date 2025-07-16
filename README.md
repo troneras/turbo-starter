@@ -1,135 +1,124 @@
-# Turborepo starter
+# 🚀 Unified CMS & Translation Platform Monorepo
 
-This Turborepo starter is maintained by the Turborepo core team.
+A high-performance, extensible platform for **multi-brand, multi-jurisdiction, multilingual content and translation management**—designed for regulated industries and global products.
 
-## Using this example
+---
 
-Run the following command:
+## 🧭 **What Are We Building?**
 
-```sh
-npx create-turbo@latest
-```
+This project is the **single source of truth** for all product content, translations, releases, and localization assets across all brands, languages, and jurisdictions.
 
-## What's inside?
+We are solving problems typical CMSs and TMSs can’t:
 
-This Turborepo includes the following packages/apps:
+- **Atomic Content Releases:** Bundle translations, content entries, SEO, and assets—deploy or rollback together.
+- **Multi-brand Personalization:** Fine-grained overrides for brands, jurisdictions, and features.
+- **Workflow & Audit:** Structured workflow (draft → review → QA → deploy), deep audit logs, and compliance.
+- **Feature Flags & Dark Launch:** Decouple code and content, test new features and content safely.
+- **Scalable Integrations:** API-first design, ready for SDKs, automation, AI-driven translation, and migration from legacy platforms.
 
-### Apps and Packages
+Our goal: **Empower teams to move fast and safely, with transparency and flexibility.**
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+---
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## 🏗️ **Monorepo Structure**
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+.
+├── apps/
+│   └── api/         # Fastify REST API, background jobs, all business logic
+├── packages/
+│   └── db/          # Database migrations, schema, and seeding
+├── docker-compose.yml
+├── bun.lock
+├── package.json     # Monorepo scripts/deps
+└── turbo.json       # Turborepo config
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+- **apps/api:**
+  - REST API (Fastify + Bun) — handles all business logic, RBAC, workflow, content release, and serves OpenAPI docs.
+  - Background worker for async jobs (AI, releases, notifications).
+  - Plug-and-play plugins for DB, Redis, security, docs, etc.
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+- **packages/db:**
+  - **Drizzle ORM** schema and migrations (Postgres).
+  - Database seeds, meta, and config.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+---
+
+## ⚡ **Tech Stack**
+
+- **Node.js 18+ / Bun** — Fast builds, modern TS, ESM.
+- **Fastify** — High-performance API framework.
+- **PostgreSQL** — Scalable, relational source of truth.
+- **Redis** — Caching, job queue, speed.
+- **Drizzle ORM** — Type-safe, SQL-first migrations and queries.
+- **Swagger/OpenAPI** — Self-documenting APIs.
+- **TurboRepo** — Monorepo orchestration, fast CI.
+
+---
+
+## 🧩 **Key Features**
+
+- **Multi-brand & Multilingual**: Override content and translations at any level (global/brand/jurisdiction).
+- **Content & Translation Releases**: Atomic, auditable, and roll-back-able.
+- **Feature Flags**: Control content visibility for dark launches or staged rollouts.
+- **Workflow**: Draft, review, QA, deploy, rollback—every step logged and permissioned.
+- **AI-Ready**: Easy integration for AI-powered translation and glossary bootstrapping.
+- **Extensible**: Designed to add CMS content, SEO, asset management, and new features as you scale.
+
+---
+
+## 🏃‍♂️ **Getting Started**
+
+### Prerequisites
+
+- [Bun](https://bun.sh/) (JS runtime & package manager)
+- PostgreSQL & Redis running (see `docker-compose.yml`)
+
+### Bootstrap
+
+```bash
+# Install monorepo dependencies
+bun install
+
+# Copy and update environment config
+cp .env.example .env
 ```
 
 ### Develop
 
-To develop all apps and packages, run the following command:
+```bash
+# Run API in dev mode
+bun run --filter=api dev
 
-```
-cd my-turborepo
+# Run DB migrations
+bun run --filter=db migrate
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+# Seed database (optional)
+bun run --filter=db seed
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+- API available at [http://localhost:3000](http://localhost:3000)
+- Swagger docs at [http://localhost:3000/documentation](http://localhost:3000/documentation)
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+---
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+## 📦 **Project Structure Reference**
 
-### Remote Caching
+- `apps/api/src/` — API, routes, plugins, worker
+- `packages/db/` — Migrations, schema, seeds
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+---
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## 🛠️ **Contributing**
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+- Follow our [commit style](#).
+- Run `bun test` and `bun run check-types` before submitting PRs.
+- Open discussions for architectural proposals or major migrations.
 
-```
-cd my-turborepo
+---
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
+## 🌍 **Vision**
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+This platform will power our **global content & translation infrastructure** for years to come, supporting new markets, brands, regulatory requirements, and emerging technologies.
+It is **API-first, workflow-centric, and designed for extension**—with an initial focus on translations and releases, and a clear path to CMS, SEO, asset, and component management.

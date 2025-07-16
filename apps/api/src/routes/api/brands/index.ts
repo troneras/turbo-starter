@@ -1,8 +1,9 @@
-import { type FastifyPluginAsync } from 'fastify'
 import { eq } from 'drizzle-orm'
+import type { FastifyInstance } from "fastify";
 import { brands as brandsTable, brandLocales, locales } from '@cms/db/schema'
 
-const brands: FastifyPluginAsync = async (fastify) => {
+
+export default async function (fastify: FastifyInstance) {
     // Get all brands
     fastify.get('/', {
         schema: {
@@ -150,5 +151,3 @@ const brands: FastifyPluginAsync = async (fastify) => {
         }
     })
 }
-
-export default brands 

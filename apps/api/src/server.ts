@@ -1,29 +1,40 @@
-import { buildApp } from './app.js'
+import { getLoggerConfig } from './lib/logger.js'
+import serviceApp, { options } from './app.js'
+import Fastify from 'fastify'
+import fp from 'fastify-plugin'
+import closeWithGrace from 'close-with-grace'
 
-const start = async () => {
+const app = Fastify({
+    logger: getLoggerConfig(),
+    ...options
+})
+
+const init = async () => {
+
+    app.register(fp(serviceApp))
+
+    // Delay is the number of milliseconds for the graceful close to finish
+    closeWithGrace(
+        { delay: Number(process.env.FASTIFY_CLOSE_GRACE_DELAY) || 500 },
+        async ({ err }) => {
+            if (err != null) {
+                app.log.error(err)
+            }
+
+            await app.close()
+        }
+    )
+
+    await app.ready()
+
     try {
-        const app = await buildApp()
-
-        const port = app.config?.PORT || 3000
-        const host = app.config?.HOST || '0.0.0.0'
-
-        await app.listen({ port, host })
-
-        app.log.info(`Server listening on http://${host}:${port}`)
-
-        // Graceful shutdown
-        const signals = ['SIGINT', 'SIGTERM']
-        signals.forEach(signal => {
-            process.on(signal, async () => {
-                app.log.info(`Received ${signal}, shutting down gracefully...`)
-                await app.close()
-                process.exit(0)
-            })
-        })
+        // Start listening.
+        await app.listen({ port: Number(process.env.PORT) || 3000 })
     } catch (err) {
-        console.error(err)
+        app.log.error(err)
         process.exit(1)
     }
+
 }
 
-start() 
+init() 
