@@ -59,14 +59,41 @@ export default async function serviceApp(fastify: FastifyInstance, opts: Fastify
             'Unhandled error occurred'
         )
 
-        reply.code(err.statusCode ?? 500)
+        const statusCode = err.statusCode ?? 500
+        reply.code(statusCode)
 
         let message = 'Internal Server Error'
-        if (err.statusCode && err.statusCode < 500) {
+        let error = 'Internal Server Error'
+        
+        if (statusCode < 500) {
             message = err.message
+            // Map status codes to error names
+            switch (statusCode) {
+                case 400:
+                    error = 'Bad Request'
+                    break
+                case 401:
+                    error = 'Unauthorized'
+                    break
+                case 403:
+                    error = 'Forbidden'
+                    break
+                case 404:
+                    error = 'Not Found'
+                    break
+                case 409:
+                    error = 'Conflict'
+                    break
+                default:
+                    error = 'Client Error'
+            }
         }
 
-        return { message }
+        return { 
+            statusCode,
+            error,
+            message 
+        }
     })
 
     // An attacker could search for valid URLs if your 404 error handling is not rate limited.
@@ -92,6 +119,6 @@ export default async function serviceApp(fastify: FastifyInstance, opts: Fastify
 
             reply.code(404)
 
-            return { message: 'Not Found' }
+            return reply.notFound('Not Found')
         })
 } 

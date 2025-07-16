@@ -2,7 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { 
     LoginRequestSchema, 
     LoginResponseSchema, 
-    ErrorResponseSchema,
+    UnauthorizedErrorSchema,
+    BadRequestErrorSchema,
     type LoginRequest 
 } from "../../../schemas/auth.js";
 
@@ -15,8 +16,8 @@ export default async function (fastify: FastifyInstance) {
             body: LoginRequestSchema,
             response: {
                 200: LoginResponseSchema,
-                400: ErrorResponseSchema,
-                401: ErrorResponseSchema
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema
             }
         }
     }, async (request, reply) => {
@@ -24,11 +25,11 @@ export default async function (fastify: FastifyInstance) {
         
         // Validate that only one token type is provided (business logic validation)
         if (azure_token && service_token) {
-            return reply.code(400).send({ error: 'Cannot provide both azure_token and service_token' })
+            return reply.badRequest('Cannot provide both azure_token and service_token')
         }
         
         if (!azure_token && !service_token) {
-            return reply.code(400).send({ error: 'Must provide either azure_token or service_token' })
+            return reply.badRequest('Must provide either azure_token or service_token')
         }
         
         try {
@@ -53,9 +54,9 @@ export default async function (fastify: FastifyInstance) {
             }
         } catch (error: any) {
             if (error.message.includes('expired')) {
-                return reply.code(401).send({ error: 'Token expired' })
+                return reply.unauthorized('Token expired')
             }
-            return reply.code(401).send({ error: error.message || 'Invalid token' })
+            return reply.unauthorized(error.message || 'Invalid token')
         }
     })
 }

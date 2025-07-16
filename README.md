@@ -125,6 +125,7 @@ bun run --filter=db seed
   - `/refactor-api-endpoint` - Refactor existing endpoints to use TypeBox
   - `/write-api-route` - Create new API routes following best practices
 - Follow TypeBox schema organization patterns (see `CLAUDE.md` for details)
+- Use `@fastify/error` for precise error schema definitions and idiomatic error handling
 
 ---
 

@@ -1,4 +1,4 @@
-import { it, describe, expect, afterEach, beforeEach, mock } from 'bun:test'
+import { it, describe, expect, afterEach, beforeEach } from 'bun:test'
 import { build } from '../../helpers/build-app'
 import { serviceTokens, users } from '@cms/db/schema'
 import { createHash } from 'crypto'
@@ -28,7 +28,9 @@ describe('Auth API', () => {
 
             expect(res.statusCode).toBe(400)
             expect(JSON.parse(res.payload)).toEqual({
-                error: 'Must provide either azure_token or service_token'
+                statusCode: 400,
+                error: 'Bad Request',
+                message: 'Must provide either azure_token or service_token'
             })
         })
 
@@ -44,7 +46,9 @@ describe('Auth API', () => {
 
             expect(res.statusCode).toBe(400)
             expect(JSON.parse(res.payload)).toEqual({
-                error: 'Cannot provide both azure_token and service_token'
+                statusCode: 400,
+                error: 'Bad Request',
+                message: 'Cannot provide both azure_token and service_token'
             })
         })
 
@@ -93,7 +97,9 @@ describe('Auth API', () => {
 
                 expect(res.statusCode).toBe(401)
                 expect(JSON.parse(res.payload)).toEqual({
-                    error: 'Invalid Azure AD token'
+                    statusCode: 401,
+                    error: 'Unauthorized',
+                    message: 'Invalid Azure AD token'
                 })
             })
 
@@ -211,18 +217,15 @@ describe('Auth API', () => {
 
                 expect(res.statusCode).toBe(401)
                 expect(JSON.parse(res.payload)).toEqual({
-                    error: 'Invalid service token'
+                    statusCode: 401,
+                    error: 'Unauthorized',
+                    message: 'Invalid service token'
                 })
             })
         })
 
         describe('Error Handling', () => {
             it('should return 401 for expired tokens', async () => {
-                // Mock a token that would trigger an "expired" error
-                const mockAuth = mock(() => {
-                    throw new Error('Token expired')
-                })
-
                 // This test would need proper mocking of the auth service
                 // For now, we'll test the general error case structure
                 const res = await app.inject({
@@ -249,7 +252,9 @@ describe('Auth API', () => {
 
                 expect(res.statusCode).toBe(400)
                 expect(JSON.parse(res.payload)).toEqual({
-                    error: 'Must provide either azure_token or service_token'
+                    statusCode: 400,
+                    error: 'Bad Request',
+                    message: 'Must provide either azure_token or service_token'
                 })
             })
         })

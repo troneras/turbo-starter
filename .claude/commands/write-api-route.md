@@ -23,26 +23,52 @@ Create a new API route at `$ARGUMENTS` following Test-Driven Development (TDD) w
 Create `apps/api/src/schemas/{domain}.ts` with this structure:
 ```typescript
 import { Type, type Static } from "@sinclair/typebox"
-import { ErrorResponseSchema } from "./common.js"
+import { 
+    ErrorResponseSchema,
+    UnauthorizedErrorSchema,
+    ForbiddenErrorSchema,
+    NotFoundErrorSchema,
+    ConflictErrorSchema,
+    BadRequestErrorSchema
+} from "./common.js"
 
 export const {Name}RequestSchema = Type.Object({
     // Define request properties with appropriate types
     // Use Type.Optional() for optional fields
-    // Add validation constraints as needed
+    // Add validation constraints as needed (format: 'email', minimum, maximum, etc.)
 }, {
     additionalProperties: false
 })
 
 export const {Name}ResponseSchema = Type.Object({
-    // Define response properties
+    // Define response properties with specific types
 })
 
-// Re-export common schemas
-export { ErrorResponseSchema }
+// Query/Params schemas (if needed)
+export const {Name}QuerySchema = Type.Object({
+    page: Type.Optional(Type.Number({ default: 1 })),
+    pageSize: Type.Optional(Type.Number({ default: 20 }))
+})
+
+export const {Name}ParamsSchema = Type.Object({
+    id: Type.String() // Use appropriate type/format for IDs
+})
+
+// Re-export common error schemas
+export { 
+    ErrorResponseSchema,
+    UnauthorizedErrorSchema,
+    ForbiddenErrorSchema,
+    NotFoundErrorSchema,
+    ConflictErrorSchema,
+    BadRequestErrorSchema
+}
 
 // Generate TypeScript types
 export type {Name}Request = Static<typeof {Name}RequestSchema>
 export type {Name}Response = Static<typeof {Name}ResponseSchema>
+export type {Name}Query = Static<typeof {Name}QuerySchema>
+export type {Name}Params = Static<typeof {Name}ParamsSchema>
 ```
 
 ### Step 3: Create Route Handler
@@ -52,8 +78,16 @@ import type { FastifyInstance } from "fastify";
 import { 
     {Name}RequestSchema,
     {Name}ResponseSchema,
-    ErrorResponseSchema,
-    type {Name}Request 
+    {Name}QuerySchema,
+    {Name}ParamsSchema,
+    UnauthorizedErrorSchema,
+    ForbiddenErrorSchema,
+    NotFoundErrorSchema,
+    ConflictErrorSchema,
+    BadRequestErrorSchema,
+    type {Name}Request,
+    type {Name}Query,
+    type {Name}Params
 } from "../../../schemas/{domain}.js";
 
 export default async function (fastify: FastifyInstance) {
@@ -61,29 +95,50 @@ export default async function (fastify: FastifyInstance) {
         schema: {
             tags: ['{domain}'],
             summary: 'Clear description of what this endpoint does',
-            body: {Name}RequestSchema, // for POST/PUT
-            querystring: QuerySchema, // for GET with query params
-            params: ParamsSchema, // for path parameters
+            security: [{ bearerAuth: [] }], // if auth required
+            body: {Name}RequestSchema, // for POST/PUT/PATCH
+            querystring: {Name}QuerySchema, // for GET with query params
+            params: {Name}ParamsSchema, // for path parameters like /:id
             response: {
-                200: {Name}ResponseSchema,
-                400: ErrorResponseSchema,
-                401: ErrorResponseSchema,
-                403: ErrorResponseSchema, // if auth required
-                404: ErrorResponseSchema, // if resource lookup
-                500: ErrorResponseSchema
+                200: {Name}ResponseSchema, // or 201 for CREATE
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema, // if auth required
+                403: ForbiddenErrorSchema, // if authorization required
+                404: NotFoundErrorSchema, // if resource lookup
+                409: ConflictErrorSchema // if uniqueness constraints
             }
-        }
+        },
+        onRequest: [
+            fastify.authenticate, // if auth required
+            fastify.requireRole('admin') // if specific role required
+        ]
     }, async (request, reply) => {
         const data = request.body as {Name}Request
-        
-        // Business logic validation (if needed beyond schema)
+        const query = request.query as {Name}Query // if query params
+        const params = request.params as {Name}Params // if path params
+        const currentUser = (request as any).user // if auth required
         
         try {
-            // Implementation logic
+            // Implementation logic using fastify plugins/services
+            const result = await fastify.{serviceName}.{methodName}(data)
+            
+            // Set appropriate status code
+            reply.code(201) // for CREATE operations
             return result
         } catch (error: any) {
-            fastify.log.error(error, 'Error in {endpoint}')
-            return reply.code(500).send({ error: error.message || 'Internal server error' })
+            // Handle specific business logic errors
+            if (error.message.includes('not found')) {
+                return reply.notFound('Resource not found')
+            }
+            if (error.message.includes('already exists')) {
+                return reply.conflict('Resource already exists')
+            }
+            if (error.message.includes('invalid')) {
+                return reply.badRequest(error.message)
+            }
+            
+            // Let other errors bubble up to global error handler
+            throw error
         }
     })
 }
@@ -91,8 +146,10 @@ export default async function (fastify: FastifyInstance) {
 
 ### Step 4: Best Practices Application
 - **Schema Design**: Use descriptive, consistent naming conventions
-- **Validation**: Leverage TypeBox features (Optional, String patterns, etc.)
-- **Error Handling**: Use appropriate HTTP status codes and meaningful messages
+- **Validation**: Leverage TypeBox features (Optional, String patterns, format validation, etc.)
+- **Error Handling**: Use idiomatic Fastify error methods (`reply.badRequest()`, `reply.conflict()`, etc.)
+- **Error Schemas**: Use specific fastify-error schemas instead of generic ErrorResponseSchema
+- **Authentication**: Use `fastify.authenticate` and `fastify.requireRole()` decorators
 - **Security**: Include rate limiting for sensitive endpoints, validate all inputs
 - **Documentation**: Add clear summaries and consistent tag naming
 
@@ -139,11 +196,43 @@ describe("{Domain} API - {Endpoint}", () => {
   // Test authentication (if required)
   describe("Authentication", () => {
     it("should return 401 for missing authentication", async () => {
-      // Test cases
+      const res = await app.inject({
+        method: '{METHOD}',
+        url: '/api/{domain}/{endpoint}'
+      });
+      
+      expect(res.statusCode).toBe(401);
+      const response = JSON.parse(res.payload);
+      expect(response.message).toBe('Unauthorized');
     });
     
     it("should return 401 for invalid token", async () => {
-      // Test cases
+      const res = await app.inject({
+        method: '{METHOD}',
+        url: '/api/{domain}/{endpoint}',
+        headers: {
+          authorization: 'Bearer invalid-token'
+        }
+      });
+      
+      expect(res.statusCode).toBe(401);
+      const response = JSON.parse(res.payload);
+      expect(response.message).toBe('Unauthorized');
+    });
+    
+    it("should return 403 for insufficient permissions", async () => {
+      // Create user token without required role
+      const res = await app.inject({
+        method: '{METHOD}',
+        url: '/api/{domain}/{endpoint}',
+        headers: {
+          authorization: `Bearer ${userToken}`
+        }
+      });
+      
+      expect(res.statusCode).toBe(403);
+      const response = JSON.parse(res.payload);
+      expect(response.message).toBe('Forbidden');
     });
   });
 

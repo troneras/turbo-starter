@@ -3,7 +3,6 @@ import fastify from 'fastify'
 import serviceApp from '../../src/app.js'
 import fp from 'fastify-plugin'
 
-import { build } from '../helpers/build-app.js'
 describe('Error Handler', () => {
     let app: any
 
@@ -23,6 +22,8 @@ describe('Error Handler', () => {
         })
 
         expect(JSON.parse(res.payload)).toEqual({
+            statusCode: 500,
+            error: 'Internal Server Error',
             message: 'Internal Server Error'
         })
     })

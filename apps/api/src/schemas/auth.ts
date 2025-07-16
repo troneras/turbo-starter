@@ -1,5 +1,9 @@
 import { Type, type Static } from "@sinclair/typebox"
-import { ErrorResponseSchema } from "./common.js"
+import { 
+    ErrorResponseSchema,
+    UnauthorizedErrorSchema,
+    BadRequestErrorSchema
+} from "./common.js"
 
 export const LoginRequestSchema = Type.Object({
     azure_token: Type.Optional(Type.String()),
@@ -21,7 +25,11 @@ export const LoginResponseSchema = Type.Object({
     permissions: Type.Array(Type.String())
 })
 
-export { ErrorResponseSchema }
+export { 
+    ErrorResponseSchema,
+    UnauthorizedErrorSchema,
+    BadRequestErrorSchema
+}
 
 export type LoginRequest = Static<typeof LoginRequestSchema>
 export type LoginResponse = Static<typeof LoginResponseSchema>

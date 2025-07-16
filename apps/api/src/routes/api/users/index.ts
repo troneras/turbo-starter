@@ -1,4 +1,25 @@
 import type { FastifyInstance } from "fastify";
+import { 
+    GetMeResponseSchema,
+    ListUsersQuerySchema,
+    ListUsersResponseSchema,
+    CreateUserRequestSchema,
+    CreateUserResponseSchema,
+    UpdateUserParamsSchema,
+    UpdateUserRequestSchema,
+    UpdateUserResponseSchema,
+    DeleteUserParamsSchema,
+    UnauthorizedErrorSchema,
+    ForbiddenErrorSchema,
+    NotFoundErrorSchema,
+    ConflictErrorSchema,
+    BadRequestErrorSchema,
+    type ListUsersQuery,
+    type CreateUserRequest,
+    type UpdateUserParams,
+    type UpdateUserRequest,
+    type DeleteUserParams
+} from "../../../schemas/users.js";
 
 export default async function (fastify: FastifyInstance) {
     // Get current user info
@@ -8,36 +29,8 @@ export default async function (fastify: FastifyInstance) {
             summary: 'Get current user info',
             security: [{ bearerAuth: [] }],
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        user: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'string' },
-                                email: { type: 'string' },
-                                name: { type: 'string' },
-                                azure_ad_oid: { type: 'string', nullable: true },
-                                azure_ad_tid: { type: 'string', nullable: true },
-                                last_login_at: { type: 'string', nullable: true }
-                            }
-                        },
-                        roles: {
-                            type: 'array',
-                            items: { type: 'string' }
-                        },
-                        permissions: {
-                            type: 'array',
-                            items: { type: 'string' }
-                        }
-                    }
-                },
-                401: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                }
+                200: GetMeResponseSchema,
+                401: UnauthorizedErrorSchema
             }
         },
         onRequest: [fastify.authenticate]
@@ -68,56 +61,16 @@ export default async function (fastify: FastifyInstance) {
             tags: ['users'],
             summary: 'List all users',
             security: [{ bearerAuth: [] }],
-            querystring: {
-                type: 'object',
-                properties: {
-                    page: { type: 'number', default: 1 },
-                    pageSize: { type: 'number', default: 20 }
-                }
-            },
+            querystring: ListUsersQuerySchema,
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        users: {
-                            type: 'array',
-                            items: {
-                                type: 'object',
-                                properties: {
-                                    id: { type: 'string' },
-                                    email: { type: 'string' },
-                                    name: { type: 'string' },
-                                    roles: {
-                                        type: 'array',
-                                        items: { type: 'string' }
-                                    },
-                                    createdAt: { type: 'string' },
-                                    last_login_at: { type: 'string', nullable: true }
-                                }
-                            }
-                        },
-                        total: { type: 'number' },
-                        page: { type: 'number' },
-                        pageSize: { type: 'number' }
-                    }
-                },
-                401: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                },
-                403: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                }
+                200: ListUsersResponseSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema
             }
         },
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
-        const { page = 1, pageSize = 20 } = request.query as { page?: number; pageSize?: number }
+        const { page = 1, pageSize = 20 } = request.query as ListUsersQuery
         
         const result = await fastify.users.listUsers(page, pageSize)
         
@@ -130,49 +83,18 @@ export default async function (fastify: FastifyInstance) {
             tags: ['users'],
             summary: 'Create new user',
             security: [{ bearerAuth: [] }],
-            body: {
-                type: 'object',
-                properties: {
-                    email: { type: 'string', format: 'email' },
-                    name: { type: 'string' },
-                    roles: {
-                        type: 'array',
-                        items: { type: 'string' },
-                        default: ['user']
-                    }
-                },
-                required: ['email', 'name']
-            },
+            body: CreateUserRequestSchema,
             response: {
-                201: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'string' },
-                        email: { type: 'string' },
-                        name: { type: 'string' },
-                        roles: {
-                            type: 'array',
-                            items: { type: 'string' }
-                        }
-                    }
-                },
-                400: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                },
-                409: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                }
+                201: CreateUserResponseSchema,
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema,
+                409: ConflictErrorSchema
             }
         },
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
-        const { email, name, roles = ['user'] } = request.body as { email: string; name: string; roles?: string[] }
+        const { email, name, roles = ['user'] } = request.body as CreateUserRequest
         
         try {
             const user = await fastify.users.createUser({ email, name, roles })
@@ -185,7 +107,7 @@ export default async function (fastify: FastifyInstance) {
             if (error.message.includes('Invalid role')) {
                 return reply.badRequest(error.message)
             }
-            throw error
+            throw fastify.httpErrors.badRequest(error.message)
         }
     })
     
@@ -195,55 +117,21 @@ export default async function (fastify: FastifyInstance) {
             tags: ['users'],
             summary: 'Update user',
             security: [{ bearerAuth: [] }],
-            params: {
-                type: 'object',
-                properties: {
-                    id: { type: 'string' }
-                },
-                required: ['id']
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    name: { type: 'string' },
-                    email: { type: 'string', format: 'email' },
-                    roles: {
-                        type: 'array',
-                        items: { type: 'string' }
-                    }
-                }
-            },
+            params: UpdateUserParamsSchema,
+            body: UpdateUserRequestSchema,
             response: {
-                200: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'string' },
-                        email: { type: 'string' },
-                        name: { type: 'string' },
-                        roles: {
-                            type: 'array',
-                            items: { type: 'string' }
-                        }
-                    }
-                },
-                404: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                },
-                409: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                }
+                200: UpdateUserResponseSchema,
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema,
+                404: NotFoundErrorSchema,
+                409: ConflictErrorSchema
             }
         },
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
-        const { id } = request.params as { id: string }
-        const updates = request.body as { name?: string; email?: string; roles?: string[] }
+        const { id } = request.params as UpdateUserParams
+        const updates = request.body as UpdateUserRequest
         
         try {
             const user = await fastify.users.updateUser(id, updates)
@@ -255,7 +143,7 @@ export default async function (fastify: FastifyInstance) {
             if (error.message.includes('already exists')) {
                 return reply.conflict('User with this email already exists')
             }
-            throw error
+            throw fastify.httpErrors.badRequest(error.message)
         }
     })
     
@@ -265,34 +153,18 @@ export default async function (fastify: FastifyInstance) {
             tags: ['users'],
             summary: 'Delete user',
             security: [{ bearerAuth: [] }],
-            params: {
-                type: 'object',
-                properties: {
-                    id: { type: 'string' }
-                },
-                required: ['id']
-            },
+            params: DeleteUserParamsSchema,
             response: {
-                204: {
-                    type: 'null'
-                },
-                400: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                },
-                404: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' }
-                    }
-                }
+                204: { type: 'null' },
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema,
+                404: NotFoundErrorSchema
             }
         },
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
-        const { id } = request.params as { id: string }
+        const { id } = request.params as DeleteUserParams
         const currentUser = (request as any).user
         
         // Prevent self-deletion
@@ -308,7 +180,7 @@ export default async function (fastify: FastifyInstance) {
             if (error.message.includes('not found')) {
                 return reply.notFound('User not found')
             }
-            throw error
+            throw fastify.httpErrors.badRequest(error.message)
         }
     })
 }

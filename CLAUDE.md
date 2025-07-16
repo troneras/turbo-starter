@@ -123,17 +123,22 @@ Multi-tenant architecture supporting:
 ## API Development Patterns
 
 ### TypeBox Schema Organization
-- **Common schemas**: `schemas/common.ts` - Reusable schemas like `ErrorResponseSchema`
+- **Common schemas**: `schemas/common.ts` - Reusable schemas like `ErrorResponseSchema` and specific fastify-error schemas
 - **Domain schemas**: `schemas/{domain}.ts` - Domain-specific request/response schemas
 - **Inline structure**: Keep schema definition visible in route handlers for clarity
+- **Error schemas**: Use specific error types from `@fastify/error` for precise OpenAPI documentation
 
 ### Route Structure Best Practices
 ```typescript
 import type { FastifyInstance } from "fastify";
 import { 
     RequestSchema, 
-    ResponseSchema, 
-    ErrorResponseSchema,
+    ResponseSchema,
+    UnauthorizedErrorSchema,
+    ForbiddenErrorSchema,
+    NotFoundErrorSchema,
+    ConflictErrorSchema,
+    BadRequestErrorSchema,
     type RequestType 
 } from "../../../schemas/domain.js";
 
@@ -142,16 +147,44 @@ export default async function (fastify: FastifyInstance) {
         schema: {
             tags: ['domain'],
             summary: 'Clear description',
+            security: [{ bearerAuth: [] }], // if auth required
             body: RequestSchema,
             response: {
-                200: ResponseSchema,
-                400: ErrorResponseSchema,
-                401: ErrorResponseSchema
+                201: ResponseSchema, // or 200 for updates
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema, // if auth required
+                403: ForbiddenErrorSchema, // if authorization required
+                404: NotFoundErrorSchema, // if resource lookup
+                409: ConflictErrorSchema // if uniqueness constraints
             }
-        }
+        },
+        onRequest: [
+            fastify.authenticate, // if auth required
+            fastify.requireRole('admin') // if specific role required
+        ]
     }, async (request, reply) => {
         const data = request.body as RequestType
-        // Handler implementation
+        
+        try {
+            // Implementation logic
+            const result = await fastify.serviceName.methodName(data)
+            reply.code(201) // for CREATE operations
+            return result
+        } catch (error: any) {
+            // Handle specific business logic errors
+            if (error.message.includes('not found')) {
+                return reply.notFound('Resource not found')
+            }
+            if (error.message.includes('already exists')) {
+                return reply.conflict('Resource already exists')
+            }
+            if (error.message.includes('invalid')) {
+                return reply.badRequest(error.message)
+            }
+            
+            // Let other errors bubble up to global error handler
+            throw error
+        }
     })
 }
 ```
@@ -161,6 +194,22 @@ export default async function (fastify: FastifyInstance) {
 - Generate TypeScript types with `Static<typeof Schema>`
 - Maintain separation between schema validation and business logic validation
 - Leverage Fastify's automatic validation for basic schema rules
+
+### Authentication & Authorization Patterns
+- Use `fastify.authenticate` decorator for JWT token validation
+- Use `fastify.requireRole('role')` decorator for role-based access control
+- Authentication automatically throws `fastify.httpErrors.unauthorized()`
+- Authorization automatically throws `fastify.httpErrors.forbidden()`
+- Both decorators handle error responses with proper schema format
+
+### Error Handling Best Practices
+- Use idiomatic Fastify error methods instead of manual error responses:
+  - `reply.badRequest(message)` for 400 errors
+  - `reply.notFound(message)` for 404 errors  
+  - `reply.conflict(message)` for 409 errors
+- Use specific error schemas from `@fastify/error` for precise OpenAPI documentation
+- Let unexpected errors bubble up to global error handler
+- Avoid manual `reply.code().send()` for standard HTTP errors
 
 ### Custom Commands
 - `/refactor-api-endpoint` - Refactor existing endpoints to use TypeBox

@@ -26,7 +26,11 @@ describe('Not Found Handler', () => {
         })
 
         expect(res.statusCode).toBe(404)
-        expect(JSON.parse(res.payload)).toEqual({ message: 'Not Found' })
+        expect(JSON.parse(res.payload)).toEqual({ 
+            statusCode: 404,
+            error: 'Not Found',
+            message: 'Not Found' 
+        })
     })
 
     it('should be rate limited', async () => {

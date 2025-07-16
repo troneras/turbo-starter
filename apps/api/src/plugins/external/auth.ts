@@ -59,7 +59,7 @@ export function authPlugin(fastify: FastifyInstance) {
                         .returning()
 
                     if (!user) {
-                        throw new Error('Failed to create user')
+                        throw fastify.httpErrors.internalServerError('Failed to create user')
                     }
 
                     // Assign default user role
@@ -119,7 +119,7 @@ export function authPlugin(fastify: FastifyInstance) {
                     permissions: userPermissions
                 }
             } catch (error) {
-                throw new Error('Invalid Azure AD token')
+                throw fastify.httpErrors.unauthorized('Invalid Azure AD token')
             }
         },
 
@@ -136,15 +136,15 @@ export function authPlugin(fastify: FastifyInstance) {
                     .limit(1)
 
                 if (!serviceToken) {
-                    throw new Error('Invalid service token')
+                    throw fastify.httpErrors.unauthorized('Invalid service token')
                 }
 
                 if (serviceToken.status !== 'active') {
-                    throw new Error('Service token is not active')
+                    throw fastify.httpErrors.badRequest('Service token is not active')
                 }
 
                 if (serviceToken.expires_at && serviceToken.expires_at < new Date()) {
-                    throw new Error('Service token expired')
+                    throw fastify.httpErrors.badRequest('Service token expired')
                 }
 
                 // Update last used timestamp
@@ -165,7 +165,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 }
             } catch (error: any) {
                 fastify.log.error(error, 'Service token validation failed')
-                throw error
+                throw fastify.httpErrors.unauthorized('Invalid service token')
             }
         },
 
@@ -200,7 +200,7 @@ export default fp(async function (fastify: FastifyInstance) {
             const token = await request.jwtVerify()
             request.user = token
         } catch (err) {
-            reply.code(401).send({ error: 'Unauthorized' })
+            throw fastify.httpErrors.unauthorized('Unauthorized')
         }
     })
 
@@ -210,7 +210,7 @@ export default fp(async function (fastify: FastifyInstance) {
             const user = request.user
 
             if (!user || !user.roles || !user.roles.includes(requiredRole)) {
-                return reply.code(403).send({ error: 'Forbidden' })
+                throw fastify.httpErrors.forbidden('Forbidden')
             }
         }
     })
