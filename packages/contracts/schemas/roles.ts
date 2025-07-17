@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox"
+import { Type } from "@sinclair/typebox"
 
 // Permission schema
 export const PermissionSchema = Type.Object({
@@ -36,7 +36,3 @@ export const RolesListResponseSchema = Type.Object({
     description: "Response containing list of all roles"
 })
 
-// TypeScript types
-export type Permission = Static<typeof PermissionSchema>
-export type Role = Static<typeof RoleSchema>
-export type RolesListResponse = Static<typeof RolesListResponseSchema>

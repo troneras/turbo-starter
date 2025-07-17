@@ -6,16 +6,18 @@ import {
     BrandDetailResponseSchema,
     CreateBrandRequestSchema,
     CreateBrandResponseSchema,
-    BrandParamsSchema,
-    type CreateBrandRequest,
-    type BrandParams
-} from "../../../schemas/brands.js";
+    BrandParamsSchema
+} from "@cms/contracts/schemas/brands";
+import type {
+    CreateBrandRequest,
+    BrandParams
+} from "@cms/contracts/types/brands";
 import {
     UnauthorizedErrorSchema,
     NotFoundErrorSchema,
     ConflictErrorSchema,
     BadRequestErrorSchema
-} from "../../../schemas/common.js";
+} from "@cms/contracts/schemas/common";
 
 export default async function (fastify: FastifyInstance) {
     // Get all brands

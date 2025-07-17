@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox"
+import { Type } from "@sinclair/typebox"
 
 // Generic error response schema
 export const ErrorResponseSchema = Type.Object({
@@ -47,4 +47,3 @@ export const BadRequestErrorSchema = Type.Object({
 })
 
 
-export type ErrorResponse = Static<typeof ErrorResponseSchema>

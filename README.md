@@ -25,9 +25,11 @@ Our goal: **Empower teams to move fast and safely, with transparency and flexibi
 ```
 .
 ├── apps/
-│   └── api/         # Fastify REST API, background jobs, all business logic
+│   ├── api/         # Fastify REST API, background jobs, all business logic
+│   └── admin/       # Admin UI (Vite + React + TanStack ecosystem)
 ├── packages/
-│   └── db/          # Database migrations, schema, and seeding
+│   ├── db/          # Database migrations, schema, and seeding
+│   └── contracts/   # Shared TypeBox schemas and types between API and UI
 ├── docker-compose.yml
 ├── bun.lock
 ├── package.json     # Monorepo scripts/deps
@@ -39,9 +41,75 @@ Our goal: **Empower teams to move fast and safely, with transparency and flexibi
   - Background worker for async jobs (AI, releases, notifications).
   - Plug-and-play plugins for DB, Redis, security, docs, etc.
 
+- **apps/admin:**
+  - Modern React admin interface built with Vite and the TanStack ecosystem.
+  - Features domain-driven architecture with feature-based modules.
+  - MSAL authentication, RBAC authorization, and comprehensive UI components.
+  - Route-centric code-splitting and TanStack Query for server state management.
+
 - **packages/db:**
   - **Drizzle ORM** schema and migrations (Postgres).
   - Database seeds, meta, and config.
+
+- **packages/contracts:**
+  - **Shared TypeBox schemas** and type definitions used by both API and admin UI.
+  - Ensures type safety and consistency across the entire platform.
+  - Single source of truth for request/response types and validation schemas.
+
+---
+
+## 🎨 **Admin UI Architecture**
+
+The admin application follows a **feature-driven, domain-centric architecture** designed for scalability and maintainability:
+
+### 📁 **Directory Structure**
+
+```
+apps/admin/
+├── public/            # Static assets copied as‑is → dist/
+├── src/
+│   ├── app/           # Top‑level app wiring
+│   │   ├── providers/ # Context + TanStack Query, MSAL, RBAC
+│   │   ├── router/    # TanStack Router route tree & loaders
+│   │   ├── hooks/     # Shared hooks (useAuth, usePermissions, etc.)
+│   │   ├── layouts/   # Shell, sidebar, auth guard layouts
+│   │   └── main.tsx   # ReactDOM entry point
+│   │
+│   ├── features/      # Domain modules (one folder per bounded context)
+│   │   ├── auth/      # Authentication & authorization
+│   │   ├── users/     # User management
+│   │   ├── brands/    # Brand management
+│   │   ├── translations/ # Translation workflows
+│   │   ├── releases/  # Release management
+│   │   ├── feature‑flags/ # Feature flag controls
+│   │   └── glossary/  # Glossary management
+│   │
+│   ├── components/    # Shared UI widgets (buttons, modals, tables)
+│   ├── lib/           # Utilities: date, axios, i18n, RBAC helpers
+│   ├── types/         # TypeScript types (generated from OpenAPI)
+│   └── styles/        # Tailwind base + shadcn/ui overrides
+│
+├── tests/             # Unit/integration tests (bun test)
+└── vite.config.ts     # Build configuration
+```
+
+### 🏛️ **Architectural Conventions**
+
+- **Route-centric code-splitting**: Each `features/*/pages/` exports lazy-loaded TanStack Router routes
+- **TanStack Query**: All API calls in `features/*/hooks/useXxxQuery.ts` with automatic token management
+- **RBAC integration**: `useHasRole('admin')` guards and `<RequireRole>` wrapper components
+- **shadcn/ui + Tailwind**: Design system with theme customization in `tailwind.config.ts`
+- **MSAL authentication**: Azure AD integration with `api://cms-scope` token scope
+- **Shared type contracts**: TypeBox schemas from `@/contracts` ensure API/UI type consistency
+
+### 🎯 **Key Features**
+
+- **Feature-based organization**: Each domain (users, brands, translations) owns its pages, hooks, and components
+- **Comprehensive RBAC**: Role-based access control integrated at component and route levels
+- **Modern UI/UX**: Built with shadcn/ui components and Tailwind CSS for consistent, accessible design
+- **Performance optimized**: Code-splitting, lazy loading, and efficient state management
+- **End-to-end type safety**: Shared TypeBox contracts eliminate type drift between API and UI
+- **Testing ready**: Configured with React Testing Library, MSW for API mocking
 
 ---
 
@@ -92,11 +160,17 @@ cp .env.example .env
 # Run API in dev mode
 bun run --filter=api dev
 
+# Run admin UI in dev mode
+bun run --filter=admin dev
+
 # Run DB migrations
 bun run --filter=db migrate
 
 # Seed database (optional)
 bun run --filter=db seed
+
+# Build shared contracts (if needed)
+bun run --filter=contracts build
 ```
 
 - API available at [http://localhost:3000](http://localhost:3000)
@@ -121,6 +195,7 @@ bun run --filter=db seed
 - Open discussions for architectural proposals or major migrations.
 
 ### API Development
+
 - Use custom commands for consistent patterns:
   - `/refactor-api-endpoint` - Refactor existing endpoints to use TypeBox
   - `/write-api-route` - Create new API routes following best practices

@@ -9,7 +9,7 @@ allowed-tools: [Read, Edit, Write, Glob, Grep, Bash, TodoWrite, LS]
 
 - Current working directory: !`pwd`
 - Existing routes structure: !`find apps/api/src/routes -type d`
-- Available schemas: !`find apps/api/src/schemas -name "*.ts" -type f 2>/dev/null || echo "No schemas directory yet"`
+- Available contracts: !`find packages/contracts -name "*.ts" -type f 2>/dev/null || echo "No contracts found"`
 
 ## Your task
 
@@ -22,12 +22,12 @@ Create a new API route at `$ARGUMENTS` following Test-Driven Development (TDD) w
 - Plan error handling and validation requirements
 - Define test scenarios and expected behaviors
 
-### Step 2: Create Schema File
+### Step 2: Update Contracts Package
 
-Create `apps/api/src/schemas/{domain}.ts` with this structure:
+Create or update `packages/contracts/schemas/{domain}.ts` with this structure:
 
 ```typescript
-import { Type, type Static } from "@sinclair/typebox"
+import { Type } from "@sinclair/typebox"
 import {
     ErrorResponseSchema,
     UnauthorizedErrorSchema,
@@ -81,15 +81,90 @@ export {
     ConflictErrorSchema,
     BadRequestErrorSchema
 }
-
-// Generate TypeScript types
-export type {Name}Request = Static<typeof {Name}RequestSchema>
-export type {Name}Response = Static<typeof {Name}ResponseSchema>
-export type {Name}Query = Static<typeof {Name}QuerySchema>
-export type {Name}Params = Static<typeof {Name}ParamsSchema>
 ```
 
-### Step 3: Create Route Handler
+Create or update `packages/contracts/types/{domain}.ts` with this structure:
+
+````typescript
+import { type Static } from "@sinclair/typebox"
+import {
+    {Name}RequestSchema,
+    {Name}ResponseSchema,
+    {Name}QuerySchema,
+    {Name}ParamsSchema
+} from "../schemas/{domain}.js"
+
+/**
+ * Request payload for {action} operation.
+ *
+ * @description Data required to {action} a {resource}. Include detailed
+ * description of validation rules and business constraints.
+ *
+ * @example
+ * ```typescript
+ * const request: {Name}Request = {
+ *   email: "user@example.com",
+ *   name: "John Doe",
+ *   roles: ["user", "editor"]
+ * }
+ * ```
+ */
+export type {Name}Request = Static<typeof {Name}RequestSchema>
+
+/**
+ * Response after successfully {action} a {resource}.
+ *
+ * @description Returns the {resource} information with generated fields.
+ *
+ * @example
+ * ```typescript
+ * const response: {Name}Response = {
+ *   id: "resource-123",
+ *   name: "Resource Name",
+ *   createdAt: "2024-01-15T10:30:00Z"
+ * }
+ * ```
+ */
+export type {Name}Response = Static<typeof {Name}ResponseSchema>
+
+/**
+ * Query parameters for {resource} operations.
+ */
+export type {Name}Query = Static<typeof {Name}QuerySchema>
+
+/**
+ * Path parameters for {resource} identification.
+ */
+export type {Name}Params = Static<typeof {Name}ParamsSchema>
+````
+
+### Step 3: Update Contracts Package Exports
+
+Update `packages/contracts/schemas/index.ts`:
+
+```typescript
+// Re-export all schemas from individual modules
+export * from "./auth.js";
+export * from "./brands.js";
+export * from "./common.js";
+export * from "./roles.js";
+export * from "./users.js";
+export * from "./{domain}.js"; // Add your new domain
+```
+
+Update `packages/contracts/types/index.ts`:
+
+```typescript
+// Re-export all types from individual modules
+export * from "./auth.js";
+export * from "./brands.js";
+export * from "./common.js";
+export * from "./roles.js";
+export * from "./users.js";
+export * from "./{domain}.js"; // Add your new domain
+```
+
+### Step 4: Create Route Handler
 
 Create `apps/api/src/routes/api/{domain}/index.ts` with this structure:
 
@@ -104,11 +179,14 @@ import {
     ForbiddenErrorSchema,
     NotFoundErrorSchema,
     ConflictErrorSchema,
-    BadRequestErrorSchema,
-    type {Name}Request,
-    type {Name}Query,
-    type {Name}Params
-} from "../../../schemas/{domain}.js";
+    BadRequestErrorSchema
+} from "@cms/contracts/schemas/{domain}";
+import type {
+    {Name}Request,
+    {Name}Response,
+    {Name}Query,
+    {Name}Params
+} from "@cms/contracts/types/{domain}";
 
 export default async function (fastify: FastifyInstance) {
     fastify.{method}('/{endpoint}', {
@@ -164,18 +242,19 @@ export default async function (fastify: FastifyInstance) {
 }
 ```
 
-### Step 4: Best Practices Application
+### Step 5: Best Practices Application
 
 - **Schema Design**: Use descriptive, consistent naming conventions
 - **Schema Descriptions**: Add descriptions to both individual fields and the overall schema for better Swagger documentation
 - **Validation**: Leverage TypeBox features (Optional, String patterns, format validation, etc.)
 - **Error Handling**: Use idiomatic Fastify error methods (`reply.badRequest()`, `reply.conflict()`, etc.)
-- **Error Schemas**: Use specific fastify-error schemas instead of generic ErrorResponseSchema
+- **Error Schemas**: Use specific fastify-error schemas from contracts package
 - **Authentication**: Use `fastify.authenticate` and `fastify.requireRole()` decorators
 - **Security**: Include rate limiting for sensitive endpoints, validate all inputs
 - **Documentation**: Add clear summaries and consistent tag naming
+- **Types**: Use TSDoc documentation for better developer experience
 
-### Step 5: Write Tests First (TDD Approach)
+### Step 6: Write Tests First (TDD Approach)
 
 Create `apps/api/test/api/{domain}/{endpoint}.test.ts` following these patterns:
 
@@ -291,14 +370,15 @@ describe("{Domain} API - {Endpoint}", () => {
 });
 ```
 
-### Step 6: Implement Route Handler
+### Step 7: Implement Route Handler
 
 Now implement the actual route handler in `apps/api/src/routes/api/{domain}/index.ts` to make the tests pass.
 
-### Step 7: Integration & Verification
+### Step 8: Integration & Verification
 
 - Ensure the route directory exists or create it
 - Verify schema imports and TypeScript types
+- Verify contracts package builds: `cd packages/contracts && npx tsc --noEmit`
 - Run `bun run check-types` to validate TypeScript compilation
 - Run `bun test` to ensure all tests pass
 - Verify the endpoint works as expected
@@ -318,4 +398,4 @@ Now implement the actual route handler in `apps/api/src/routes/api/{domain}/inde
 
 - `$ARGUMENTS` could be: `users/profile POST` or `translations/bulk-update PUT`
 - Command will parse the input to determine domain, endpoint, and method
-- Always write tests first, then implement the route
+- Always update contracts package first, then write tests, then implement the route

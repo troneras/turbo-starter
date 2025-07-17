@@ -1,9 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import {
-    RolesListResponseSchema,
-    type RolesListResponse
-} from "../../../schemas/roles.js";
-import { UnauthorizedErrorSchema } from "../../../schemas/common.js";
+import { RolesListResponseSchema } from "@cms/contracts/schemas/roles.js";
+import type { RolesListResponse } from "@cms/contracts/types/roles.js";
+import { UnauthorizedErrorSchema } from "@cms/contracts/schemas/common.js";
 
 export default async function (fastify: FastifyInstance) {
     // Get all roles

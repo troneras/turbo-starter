@@ -20,15 +20,95 @@ Refactor the API endpoint at `$ARGUMENTS` to use TypeBox schemas following these
 - Identify current schema structure (JSON Schema or inline objects)
 - Note request/response patterns and validation logic
 
-### Step 2: Create TypeBox Schemas
+### Step 2: Update Contracts Package
 
-- Convert existing JSON Schema to TypeBox format
-- Add descriptions to all schema fields and the schemas themselves for better Swagger documentation
-- Organize schemas properly:
-  - Common schemas (ErrorResponseSchema, fastify-error schemas) go in `apps/api/src/schemas/common.ts`
-  - Domain-specific schemas go in `apps/api/src/schemas/{domain}.ts`
-  - Keep inline schema structure in routes for clarity
-- Use specific error schemas from `@fastify/error` instead of generic ErrorResponseSchema
+- Add or update schemas in `packages/contracts/schemas/{domain}.ts`
+- Add or update types in `packages/contracts/types/{domain}.ts`
+- Use TypeBox format with descriptions for better Swagger documentation
+- Update the main contracts exports in `packages/contracts/index.ts`
+- Use specific error schemas from common.js instead of generic ErrorResponseSchema
+
+#### Schema File Pattern (`packages/contracts/schemas/{domain}.ts`):
+
+```typescript
+import { Type } from "@sinclair/typebox";
+import {
+  ErrorResponseSchema,
+  UnauthorizedErrorSchema,
+  ForbiddenErrorSchema,
+  NotFoundErrorSchema,
+  ConflictErrorSchema,
+  BadRequestErrorSchema,
+} from "./common.js";
+
+export const RequestSchema = Type.Object(
+  {
+    email: Type.String({
+      format: "email",
+      description: "User email address (must be valid format)",
+    }),
+    name: Type.String({ description: "Full name of the user" }),
+    roles: Type.Optional(
+      Type.Array(Type.String(), { description: "Array of role names" })
+    ),
+  },
+  {
+    additionalProperties: false,
+    description: "Request body for user operation",
+  }
+);
+
+export const ResponseSchema = Type.Object(
+  {
+    id: Type.String({ description: "Unique identifier" }),
+    email: Type.String({ description: "User email address" }),
+    name: Type.String({ description: "Full name" }),
+    roles: Type.Array(Type.String(), { description: "Assigned roles" }),
+  },
+  {
+    description: "Successful operation response",
+  }
+);
+
+// Re-export common schemas
+export {
+  ErrorResponseSchema,
+  UnauthorizedErrorSchema,
+  ForbiddenErrorSchema,
+  NotFoundErrorSchema,
+  ConflictErrorSchema,
+  BadRequestErrorSchema,
+};
+```
+
+#### Types File Pattern (`packages/contracts/types/{domain}.ts`):
+
+```typescript
+import { type Static } from "@sinclair/typebox";
+import {
+  RequestSchema,
+  ResponseSchema,
+  QuerySchema,
+  ParamsSchema,
+} from "../schemas/{domain}.js";
+
+/**
+ * Request payload for {operation}.
+ *
+ * @description Detailed description of the request structure and usage.
+ */
+export type Request = Static<typeof RequestSchema>;
+
+/**
+ * Response data for {operation}.
+ *
+ * @description Detailed description of the response structure.
+ */
+export type Response = Static<typeof ResponseSchema>;
+
+export type Query = Static<typeof QuerySchema>;
+export type Params = Static<typeof ParamsSchema>;
+```
 
 ### Step 3: Update Route Structure
 
@@ -45,11 +125,14 @@ import {
     ForbiddenErrorSchema,
     NotFoundErrorSchema,
     ConflictErrorSchema,
-    BadRequestErrorSchema,
-    type RequestType,
-    type QueryType,
-    type ParamsType
-} from "../../../schemas/{domain}.js";
+    BadRequestErrorSchema
+} from "@cms/contracts/schemas/{domain}";
+import type {
+    Request,
+    Response,
+    Query,
+    Params
+} from "@cms/contracts/types/{domain}";
 
 export default async function (fastify: FastifyInstance) {
     fastify.{method}('/endpoint', {
@@ -74,9 +157,9 @@ export default async function (fastify: FastifyInstance) {
             fastify.requireRole('admin') // if specific role required
         ]
     }, async (request, reply) => {
-        const data = request.body as RequestType
-        const query = request.query as QueryType // if query params
-        const params = request.params as ParamsType // if path params
+        const data = request.body as Request
+        const query = request.query as Query // if query params
+        const params = request.params as Params // if path params
 
         try {
             // Implementation logic
@@ -116,42 +199,38 @@ export default async function (fastify: FastifyInstance) {
   - `reply.forbidden(message)` for 403 errors (handled by role decorators)
   - `reply.notFound(message)` for 404 errors
   - `reply.conflict(message)` for 409 errors
-- Use specific error schemas from `@fastify/error` for precise OpenAPI documentation
+- Use specific error schemas from `@cms/contracts/schemas/common` for precise OpenAPI documentation
 - Let unexpected errors bubble up to global error handler
 
 ### Step 6: TypeScript Integration
 
-- Import schemas and types from schema files
-- Use `Static<typeof Schema>` for type generation
+- Import schemas from `@cms/contracts/schemas/{domain}`
+- Import types from `@cms/contracts/types/{domain}`
+- Use TSDoc-documented types for better developer experience
 - Maintain type safety throughout the handler
 - Keep business logic validation separate from schema validation
 
-### Step 6.5: Add Schema Descriptions
+### Step 7: Update Contracts Package Exports
 
-Add descriptions to improve Swagger documentation:
+Update `packages/contracts/index.ts` to include new schemas/types:
 
 ```typescript
-export const RequestSchema = Type.Object(
-  {
-    email: Type.String({
-      format: "email",
-      description: "User email address (must be valid format)",
-    }),
-    name: Type.String({ description: "Full name of the user" }),
-    roles: Type.Optional(
-      Type.Array(Type.String(), { description: "Array of role names" })
-    ),
-  },
-  {
-    additionalProperties: false,
-    description: "Request body for user operation",
-  }
-);
+// Export all schemas
+export * as schemas from "./schemas/index.js";
+
+// Export all types
+export * as types from "./types/index.js";
+
+// Re-export common schemas for backward compatibility
+export * from "./schemas/index.js";
 ```
 
-### Step 7: Verification
+Update `packages/contracts/schemas/index.ts` and `packages/contracts/types/index.ts` to include your new domain files.
+
+### Step 8: Verification
 
 - Run `bun run check-types` to verify TypeScript compilation
 - Run existing tests to ensure functionality is preserved
 - Ensure all imports are correct and types are properly generated
 - Verify OpenAPI documentation reflects the new schema structure
+- Check that contracts package builds correctly: `cd packages/contracts && npx tsc --noEmit`

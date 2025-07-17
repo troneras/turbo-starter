@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { 
+import {
     GetMeResponseSchema,
     ListUsersQuerySchema,
     ListUsersResponseSchema,
@@ -13,13 +13,15 @@ import {
     ForbiddenErrorSchema,
     NotFoundErrorSchema,
     ConflictErrorSchema,
-    BadRequestErrorSchema,
-    type ListUsersQuery,
-    type CreateUserRequest,
-    type UpdateUserParams,
-    type UpdateUserRequest,
-    type DeleteUserParams
-} from "../../../schemas/users.js";
+    BadRequestErrorSchema
+} from "@cms/contracts/schemas/users";
+import type {
+    ListUsersQuery,
+    CreateUserRequest,
+    UpdateUserParams,
+    UpdateUserRequest,
+    DeleteUserParams
+} from "@cms/contracts/types/users";
 
 export default async function (fastify: FastifyInstance) {
     // Get current user info
@@ -36,11 +38,11 @@ export default async function (fastify: FastifyInstance) {
         onRequest: [fastify.authenticate]
     }, async (request, reply) => {
         const user = (request as any).user
-        
+
         // Get user's roles and permissions
         const roles = await fastify.users.getUserRoles(user.sub)
         const permissions = await fastify.users.getUserPermissions(user.sub)
-        
+
         return {
             user: {
                 id: user.sub,
@@ -54,7 +56,7 @@ export default async function (fastify: FastifyInstance) {
             permissions
         }
     })
-    
+
     // List all users (admin only)
     fastify.get('/', {
         schema: {
@@ -71,12 +73,12 @@ export default async function (fastify: FastifyInstance) {
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
         const { page = 1, pageSize = 20 } = request.query as ListUsersQuery
-        
+
         const result = await fastify.users.listUsers(page, pageSize)
-        
+
         return result
     })
-    
+
     // Create new user (admin only)
     fastify.post('/', {
         schema: {
@@ -95,7 +97,7 @@ export default async function (fastify: FastifyInstance) {
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
         const { email, name, roles = ['user'] } = request.body as CreateUserRequest
-        
+
         try {
             const user = await fastify.users.createUser({ email, name, roles })
             reply.code(201)
@@ -110,7 +112,7 @@ export default async function (fastify: FastifyInstance) {
             throw fastify.httpErrors.badRequest(error.message)
         }
     })
-    
+
     // Update user (admin only)
     fastify.patch('/:id', {
         schema: {
@@ -132,7 +134,7 @@ export default async function (fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as UpdateUserParams
         const updates = request.body as UpdateUserRequest
-        
+
         try {
             const user = await fastify.users.updateUser(id, updates)
             return user
@@ -146,7 +148,7 @@ export default async function (fastify: FastifyInstance) {
             throw fastify.httpErrors.badRequest(error.message)
         }
     })
-    
+
     // Delete user (admin only)
     fastify.delete('/:id', {
         schema: {
@@ -166,12 +168,12 @@ export default async function (fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as DeleteUserParams
         const currentUser = (request as any).user
-        
+
         // Prevent self-deletion
         if (id === currentUser.sub) {
             return reply.badRequest('Cannot delete yourself')
         }
-        
+
         try {
             await fastify.users.deleteUser(id)
             reply.code(204)

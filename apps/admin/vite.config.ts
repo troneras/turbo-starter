@@ -8,7 +8,12 @@ import { resolve } from 'node:path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    tanstackRouter({ target: 'react', autoCodeSplitting: true }),
+    tanstackRouter({
+      target: 'react',
+      autoCodeSplitting: true,
+      routesDirectory: 'src/app/routes',
+      generatedRouteTree: 'src/app/routeTree.gen.ts',
+    }),
     react(),
     tailwindcss(),
   ],

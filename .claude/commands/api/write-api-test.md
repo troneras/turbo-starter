@@ -133,6 +133,43 @@ const tokenHash = createHash("sha256").update("raw_token").digest("hex");
 // Remember: service tokens need created_by user!
 ```
 
+## Contract Types Usage
+
+### 1. **Import Types from Contracts Package**
+
+```typescript
+// Import types for request/response validation
+import type {
+  CreateUserRequest,
+  CreateUserResponse,
+  User,
+} from "@cms/contracts/types/users";
+
+// Use types for payload validation
+const validPayload: CreateUserRequest = {
+  email: "test@example.com",
+  name: "Test User",
+  roles: ["user"],
+};
+
+// Use types for response validation
+const response = JSON.parse(res.payload) as CreateUserResponse;
+expect(response.id).toBeDefined();
+expect(response.email).toBe(validPayload.email);
+```
+
+### 2. **Schema-based Validation Testing**
+
+```typescript
+// Import schemas for structure validation (optional)
+import { CreateUserRequestSchema } from "@cms/contracts/schemas/users";
+import { Type } from "@sinclair/typebox";
+
+// Validate request structure matches schema
+const isValidRequest = Type.Check(CreateUserRequestSchema, validPayload);
+expect(isValidRequest).toBe(true);
+```
+
 ## Test Coverage Checklist
 
 ### ✅ **Input Validation**
@@ -171,12 +208,17 @@ const tokenHash = createHash("sha256").update("raw_token").digest("hex");
 
 ## Response Validation Patterns
 
-### 1. **Structure Validation**
+### 1. **Structure Validation with Types**
 
 ```typescript
+import type { LoginResponse } from "@cms/contracts/types/auth";
+
+const response = JSON.parse(res.payload) as LoginResponse;
+
 expect(response).toHaveProperty("jwt");
 expect(response).toHaveProperty("user");
 expect(Array.isArray(response.roles)).toBe(true);
+expect(Array.isArray(response.permissions)).toBe(true);
 ```
 
 ### 2. **Content Validation**
@@ -233,6 +275,48 @@ import { eq, and } from "drizzle-orm";
 
 // Crypto for tokens
 import { createHash } from "crypto";
+
+// Contract types for request/response validation
+import type {
+  CreateUserRequest,
+  CreateUserResponse,
+} from "@cms/contracts/types/users";
+
+// Optional: Contract schemas for structure validation
+import { CreateUserRequestSchema } from "@cms/contracts/schemas/users";
+```
+
+## Test Payload Patterns
+
+### 1. **Using Contract Types for Type Safety**
+
+```typescript
+import type { CreateUserRequest } from "@cms/contracts/types/users";
+
+const validPayload: CreateUserRequest = {
+  email: "test@example.com",
+  name: "Test User",
+  roles: ["user", "editor"],
+};
+
+const invalidPayload = {
+  email: "invalid-email", // Will be caught by validation
+  name: "", // Invalid empty name
+};
+```
+
+### 2. **Response Type Validation**
+
+```typescript
+import type { ListUsersResponse } from "@cms/contracts/types/users";
+
+const response = JSON.parse(res.payload) as ListUsersResponse;
+
+expect(response.users).toBeDefined();
+expect(Array.isArray(response.users)).toBe(true);
+expect(typeof response.total).toBe("number");
+expect(typeof response.page).toBe("number");
+expect(typeof response.pageSize).toBe("number");
 ```
 
 ## File Naming Convention
@@ -244,13 +328,19 @@ import { createHash } from "crypto";
 
 Based on the endpoint specified in $ARGUMENTS, create comprehensive tests covering:
 
-1. **Input validation** for all request parameters
+1. **Input validation** for all request parameters using contract types
 2. **Authentication scenarios** (if auth-protected)
-3. **Success cases** with proper response validation
+3. **Success cases** with proper response validation using contract types
 4. **Error cases** with appropriate status codes
 5. **Database interactions** with proper foreign key handling
 6. **Rate limiting** (if applicable)
 
 Follow the patterns above and ensure all database dependencies are properly handled.
 
-Remember: Always check the database schema for foreign key constraints before creating test data!
+**Key Points:**
+
+- Use contract types for type-safe test data and response validation
+- Import types from `@cms/contracts/types/{domain}`
+- Use schemas from `@cms/contracts/schemas/{domain}` for structural validation (optional)
+- Always check the database schema for foreign key constraints before creating test data!
+- Leverage TypeScript for better test reliability and IDE support

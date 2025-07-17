@@ -1,5 +1,4 @@
 import fp from 'fastify-plugin'
-import fastifyPostgres from '@fastify/postgres'
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from '@cms/db/schema'

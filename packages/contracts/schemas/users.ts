@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox"
+import { Type } from "@sinclair/typebox"
 import {
     ErrorResponseSchema,
     UnauthorizedErrorSchema,
@@ -119,15 +119,3 @@ export {
     BadRequestErrorSchema
 }
 
-// Type exports
-export type User = Static<typeof UserSchema>
-export type UserWithRoles = Static<typeof UserWithRolesSchema>
-export type GetMeResponse = Static<typeof GetMeResponseSchema>
-export type ListUsersQuery = Static<typeof ListUsersQuerySchema>
-export type ListUsersResponse = Static<typeof ListUsersResponseSchema>
-export type CreateUserRequest = Static<typeof CreateUserRequestSchema>
-export type CreateUserResponse = Static<typeof CreateUserResponseSchema>
-export type UpdateUserParams = Static<typeof UpdateUserParamsSchema>
-export type UpdateUserRequest = Static<typeof UpdateUserRequestSchema>
-export type UpdateUserResponse = Static<typeof UpdateUserResponseSchema>
-export type DeleteUserParams = Static<typeof DeleteUserParamsSchema>

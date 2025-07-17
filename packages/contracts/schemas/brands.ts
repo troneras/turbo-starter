@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox"
+import { Type } from "@sinclair/typebox"
 
 // Base brand schema
 export const BrandSchema = Type.Object({
@@ -52,12 +52,3 @@ export const BrandDetailResponseSchema = BrandWithLocalesSchema
 
 export const CreateBrandResponseSchema = BrandSchema
 
-// Type exports
-export type Brand = Static<typeof BrandSchema>
-export type Locale = Static<typeof LocaleSchema>
-export type BrandWithLocales = Static<typeof BrandWithLocalesSchema>
-export type CreateBrandRequest = Static<typeof CreateBrandRequestSchema>
-export type BrandParams = Static<typeof BrandParamsSchema>
-export type BrandListResponse = Static<typeof BrandListResponseSchema>
-export type BrandDetailResponse = Static<typeof BrandDetailResponseSchema>
-export type CreateBrandResponse = Static<typeof CreateBrandResponseSchema>

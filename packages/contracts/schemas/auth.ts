@@ -1,4 +1,4 @@
-import { Type, type Static } from "@sinclair/typebox"
+import { Type } from "@sinclair/typebox"
 import {
     ErrorResponseSchema,
     UnauthorizedErrorSchema,
@@ -13,7 +13,7 @@ export const LoginRequestSchema = Type.Object({
     description: 'Login request body - provide either azure_token or service_token (not both)'
 })
 
-export const UserSchema = Type.Object({
+export const AuthUserSchema = Type.Object({
     id: Type.String({ description: 'Unique user identifier' }),
     email: Type.String({ description: 'User email address' }),
     name: Type.String({ description: 'Full name of the user' })
@@ -23,7 +23,7 @@ export const UserSchema = Type.Object({
 
 export const LoginResponseSchema = Type.Object({
     jwt: Type.String({ description: 'JWT token for API authentication' }),
-    user: UserSchema,
+    user: AuthUserSchema,
     roles: Type.Array(Type.String(), { description: 'Array of user role names' }),
     permissions: Type.Array(Type.String(), { description: 'Array of user permission names' })
 }, {
@@ -36,6 +36,3 @@ export {
     BadRequestErrorSchema
 }
 
-export type LoginRequest = Static<typeof LoginRequestSchema>
-export type LoginResponse = Static<typeof LoginResponseSchema>
-export type User = Static<typeof UserSchema>

@@ -3,9 +3,9 @@ import {
     LoginRequestSchema,
     LoginResponseSchema,
     UnauthorizedErrorSchema,
-    BadRequestErrorSchema,
-    type LoginRequest
-} from "../../../schemas/auth.js";
+    BadRequestErrorSchema
+} from "@cms/contracts/schemas/auth";
+import type { LoginRequest } from "@cms/contracts/types/auth";
 
 export default async function (fastify: FastifyInstance) {
     // Login endpoint - exchange Azure AD token or service token for JWT
