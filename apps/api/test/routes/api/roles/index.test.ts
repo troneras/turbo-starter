@@ -31,7 +31,7 @@ describe('Roles API', () => {
         beforeEach(async () => {
             // Create test users with unique emails for each test run
             const timestamp = Date.now()
-            
+
             const [createdTestUser] = await app.db
                 .insert(users)
                 .values({
@@ -143,7 +143,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(200)
-            
+
             const response = JSON.parse(res.payload)
             expect(response).toHaveProperty('roles')
             expect(Array.isArray(response.roles)).toBe(true)
@@ -176,7 +176,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(200)
-            
+
             const response = JSON.parse(res.payload)
             expect(response).toHaveProperty('roles')
             expect(Array.isArray(response.roles)).toBe(true)
@@ -199,7 +199,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(401)
-            
+
             const response = JSON.parse(res.payload)
             expect(response).toEqual({
                 statusCode: 401,
@@ -218,7 +218,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(401)
-            
+
             const response = JSON.parse(res.payload)
             expect(response.statusCode).toBe(401)
             expect(response.error).toBe('Unauthorized')
@@ -235,7 +235,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(401)
-            
+
             const response = JSON.parse(res.payload)
             expect(response.statusCode).toBe(401)
             expect(response.error).toBe('Unauthorized')
@@ -261,7 +261,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(401)
-            
+
             const response = JSON.parse(res.payload)
             expect(response.statusCode).toBe(401)
             expect(response.error).toBe('Unauthorized')
@@ -283,7 +283,7 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(200)
-            
+
             const response = JSON.parse(res.payload)
             expect(response).toHaveProperty('roles')
             expect(Array.isArray(response.roles)).toBe(true)
@@ -310,11 +310,11 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(200)
-            
+
             const response = JSON.parse(res.payload)
             expect(response).toHaveProperty('roles')
             expect(Array.isArray(response.roles)).toBe(true)
-            
+
             // Check that roles are sorted alphabetically
             const roleNames = response.roles.map((r: any) => r.name)
             const sortedRoleNames = [...roleNames].sort()
@@ -350,11 +350,11 @@ describe('Roles API', () => {
             })
 
             expect(res.statusCode).toBe(200)
-            
+
             const response = JSON.parse(res.payload)
             expect(response).toHaveProperty('roles')
             expect(Array.isArray(response.roles)).toBe(true)
-            
+
             // Should return roles without permissions (like non-admin)
             response.roles.forEach((role: any) => {
                 expect(role.permissions.length).toBe(0)
