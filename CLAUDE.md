@@ -87,7 +87,7 @@ Multi-tenant architecture supporting:
 - Auto-generated OpenAPI docs at `/documentation`
 - Webhook endpoints for external integrations
 - **TypeBox** for schema validation and type generation
-- Schema organization in `schemas/` directory with common reusable schemas
+- Shared contracts package (`packages/contracts`) with centralized schemas and types
 
 ## Development Environment
 
@@ -138,10 +138,12 @@ Multi-tenant architecture supporting:
 
 ### TypeBox Schema Organization
 
-- **Common schemas**: `schemas/common.ts` - Reusable schemas like `ErrorResponseSchema` and specific fastify-error schemas
-- **Domain schemas**: `schemas/{domain}.ts` - Domain-specific request/response schemas
-- **Inline structure**: Keep schema definition visible in route handlers for clarity
-- **Error schemas**: Use specific error types from `@fastify/error` for precise OpenAPI documentation
+- **Contracts Package**: All schemas and types are centralized in `packages/contracts`
+- **Schema Imports**: Import schemas from `@cms/contracts/schemas/{domain}`
+- **Type Imports**: Import types from `@cms/contracts/types/{domain}`
+- **Common schemas**: `packages/contracts/schemas/common.ts` - Reusable error schemas
+- **Domain schemas**: `packages/contracts/schemas/{domain}.ts` - Domain-specific request/response schemas
+- **Domain types**: `packages/contracts/types/{domain}.ts` - TypeScript types with TSDoc documentation
 
 ### Route Structure Best Practices
 
@@ -155,8 +157,8 @@ import {
   NotFoundErrorSchema,
   ConflictErrorSchema,
   BadRequestErrorSchema,
-  type RequestType,
-} from "../../../schemas/domain.js";
+} from "@cms/contracts/schemas/domain";
+import type { RequestType } from "@cms/contracts/types/domain";
 
 export default async function (fastify: FastifyInstance) {
   fastify.post(
@@ -256,14 +258,21 @@ The `packages/contracts` contains shared TypeBox schemas and type definitions us
 
 ```
 packages/contracts/
-├── src/
-│   ├── schemas/        # TypeBox schema definitions
-│   │   ├── auth.ts     # Authentication schemas
-│   │   ├── users.ts    # User management schemas
-│   │   ├── brands.ts   # Brand schemas
-│   │   ├── common.ts   # Error responses and shared schemas
-│   │   └── index.ts    # Re-exports all schemas
-│   └── index.ts        # Main package entry point
+├── schemas/            # TypeBox schema definitions
+│   ├── auth.ts         # Authentication schemas
+│   ├── users.ts        # User management schemas
+│   ├── brands.ts       # Brand schemas
+│   ├── roles.ts        # Role and permission schemas
+│   ├── common.ts       # Error responses and shared schemas
+│   └── index.ts        # Re-exports all schemas
+├── types/              # TypeScript type definitions
+│   ├── auth.ts         # Authentication types with TSDoc
+│   ├── users.ts        # User management types with TSDoc
+│   ├── brands.ts       # Brand types with TSDoc
+│   ├── roles.ts        # Role and permission types with TSDoc
+│   ├── common.ts       # Common types with TSDoc
+│   └── index.ts        # Re-exports all types
+├── index.ts            # Main package entry point
 ├── package.json
 └── tsconfig.json
 ```
@@ -309,7 +318,11 @@ export const GetUsersResponseSchema = Type.Object({
 
 ```typescript
 // apps/api/src/routes/users.ts
-import { UserSchema, CreateUserRequestSchema } from "@/contracts";
+import {
+  UserSchema,
+  CreateUserRequestSchema,
+} from "@cms/contracts/schemas/users";
+import type { CreateUserRequest } from "@cms/contracts/types/users";
 
 export default async function (fastify: FastifyInstance) {
   fastify.post(
@@ -336,7 +349,11 @@ export default async function (fastify: FastifyInstance) {
 ```typescript
 // apps/admin/src/features/users/hooks/useUsersQuery.ts
 import type { Static } from "@sinclair/typebox";
-import { UserSchema, GetUsersResponseSchema } from "@/contracts";
+import {
+  UserSchema,
+  GetUsersResponseSchema,
+} from "@cms/contracts/schemas/users";
+import type { User, GetUsersResponse } from "@cms/contracts/types/users";
 
 type User = Static<typeof UserSchema>;
 type GetUsersResponse = Static<typeof GetUsersResponseSchema>;
@@ -483,7 +500,12 @@ import {
   GetUsersResponseSchema,
   CreateUserRequestSchema,
   UserSchema,
-} from "@/contracts";
+} from "@cms/contracts/schemas/users";
+import type {
+  GetUsersResponse,
+  CreateUserRequest,
+  User,
+} from "@cms/contracts/types/users";
 
 type GetUsersResponse = Static<typeof GetUsersResponseSchema>;
 type CreateUserRequest = Static<typeof CreateUserRequestSchema>;
@@ -743,13 +765,18 @@ export function DataTable<TData>({ columns, data }: DataTableProps<TData>) {
 #### Shared Contracts Integration
 
 ```typescript
-// Using shared TypeBox schemas from @/contracts
+// Using shared TypeBox schemas from @cms/contracts
 import type { Static } from "@sinclair/typebox";
 import {
   GetUsersResponseSchema,
   CreateUserRequestSchema,
   UserSchema,
-} from "@/contracts";
+} from "@cms/contracts/schemas/users";
+import type {
+  GetUsersResponse,
+  CreateUserRequest,
+  User,
+} from "@cms/contracts/types/users";
 
 export type GetUsersResponse = Static<typeof GetUsersResponseSchema>;
 export type CreateUserRequest = Static<typeof CreateUserRequestSchema>;
@@ -890,7 +917,7 @@ export default defineConfig({
 ### Best Practices
 
 1. **Feature Organization**: Keep related code together in feature modules
-2. **Type Safety**: Use shared TypeBox contracts from `@/contracts` for all API interactions
+2. **Type Safety**: Use shared TypeBox contracts from `@cms/contracts` for all API interactions
 3. **Schema Consistency**: Define schemas once in contracts package, use everywhere
 4. **Authentication**: Always check permissions at both route and component levels
 5. **Performance**: Implement code-splitting and lazy loading for routes

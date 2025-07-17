@@ -52,7 +52,9 @@ Our goal: **Empower teams to move fast and safely, with transparency and flexibi
   - Database seeds, meta, and config.
 
 - **packages/contracts:**
-  - **Shared TypeBox schemas** and type definitions used by both API and admin UI.
+  - **Shared TypeBox schemas** and TypeScript type definitions used by both API and admin UI.
+  - Organized into separate `schemas/` (validation) and `types/` (TypeScript types) directories.
+  - Types include comprehensive TSDoc documentation for better developer experience.
   - Ensures type safety and consistency across the entire platform.
   - Single source of truth for request/response types and validation schemas.
 
@@ -100,7 +102,7 @@ apps/admin/
 - **RBAC integration**: `useHasRole('admin')` guards and `<RequireRole>` wrapper components
 - **shadcn/ui + Tailwind**: Design system with theme customization in `tailwind.config.ts`
 - **MSAL authentication**: Azure AD integration with `api://cms-scope` token scope
-- **Shared type contracts**: TypeBox schemas from `@/contracts` ensure API/UI type consistency
+- **Shared type contracts**: TypeBox schemas from `@cms/contracts` ensure API/UI type consistency
 
 ### 🎯 **Key Features**
 
@@ -181,9 +183,11 @@ bun run --filter=contracts build
 ## 📦 **Project Structure Reference**
 
 - `apps/api/src/` — API, routes, plugins, worker
-  - `schemas/` — TypeBox schemas organized by domain + common reusable schemas
-  - `routes/api/` — Route handlers with inline schema definitions for clarity
+  - `routes/api/` — Route handlers importing schemas from contracts package
   - `plugins/` — Fastify plugins (external infrastructure + app business logic)
+- `packages/contracts/` — Shared TypeBox schemas and TypeScript types
+  - `schemas/` — TypeBox schema definitions for validation
+  - `types/` — TypeScript type definitions with TSDoc documentation
 - `packages/db/` — Migrations, schema, seeds
 
 ---
