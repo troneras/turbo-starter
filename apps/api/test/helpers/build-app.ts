@@ -4,6 +4,7 @@ import path from 'node:path'
 import type { TestContext } from 'node:test'
 import { options as serverOptions } from '../../src/app.js'
 import assert from 'node:assert'
+import { setupTestDatabase, closeTestDb } from './db.js'
 
 
 
@@ -17,6 +18,29 @@ export function config() {
     }
 }
 
+// Set test environment variables
+function setTestEnv() {
+    // Set test database URL - prioritize TEST_DATABASE_URL, then fallback to test default
+    const testDatabaseUrl = process.env.TEST_DATABASE_URL || "postgresql://dev:dev123@localhost:5433/cms_platform_test"
+
+    // IMPORTANT: Set DATABASE_URL to the test database URL so the env plugin picks it up
+    process.env.DATABASE_URL = testDatabaseUrl
+
+    // Set other required test environment variables
+    if (!process.env.JWT_SECRET) {
+        process.env.JWT_SECRET = "test_jwt_secret_for_testing_only"
+    }
+
+    if (!process.env.REDIS_URL) {
+        process.env.REDIS_URL = "redis://localhost:6379"
+    }
+
+    // Also set NODE_ENV to test if not already set
+    if (!process.env.NODE_ENV) {
+        process.env.NODE_ENV = "test"
+    }
+}
+
 export function expectValidationError(res: LightMyRequestResponse, expectedMessage: string) {
     assert.strictEqual(res.statusCode, 400)
     const { message } = JSON.parse(res.payload)
@@ -26,7 +50,10 @@ export function expectValidationError(res: LightMyRequestResponse, expectedMessa
 
 
 // automatically build and tear down our instance
-export async function build(t?: TestContext) {
+export async function build(t?: TestContext, options: { cleanDb?: boolean } = {}) {
+    // Set test environment variables
+    setTestEnv()
+
     // you can set all the options supported by the fastify CLI command
     const argv = [AppPath]
 
@@ -39,6 +66,10 @@ export async function build(t?: TestContext) {
         serverOptions
     )) as FastifyInstance
 
+    // Clean and setup test database if requested (default: true)
+    if (options.cleanDb !== false) {
+        await setupTestDatabase()
+    }
 
     // This is after start, so we can't decorate the instance using `.decorate`
     // app.login = login
@@ -46,8 +77,16 @@ export async function build(t?: TestContext) {
 
     // If we pass the test contest, it will close the app after we are done
     if (t) {
-        t.after(() => app.close())
+        t.after(async () => {
+            await app.close()
+            await closeTestDb()
+        })
     }
 
     return app
+}
+
+// Helper function for tests that need to build app without cleaning database
+export async function buildWithoutCleanDb(t?: TestContext) {
+    return build(t, { cleanDb: false })
 }
