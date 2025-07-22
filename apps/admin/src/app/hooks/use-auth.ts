@@ -1,7 +1,8 @@
 import { useAccount, useIsAuthenticated, useMsal } from '@azure/msal-react';
 import type { AccountInfo } from '@azure/msal-browser';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { apiClient } from '../../lib/api-client';
+import { TestAuthContext } from '../providers/test-auth-provider';
 
 interface BackendUser {
   id: string;
@@ -22,7 +23,17 @@ export interface UseAuthReturn {
   isLoading: boolean;
 }
 
-export function useAuth(): UseAuthReturn {
+// Check if we're in test mode
+const isTestMode = () => {
+  return import.meta.env.VITE_TEST_MODE === 'true' || 
+         (typeof window !== 'undefined' && (
+           window.location.search.includes('testMode=true') ||
+           localStorage.getItem('test_mode') === 'true'
+         ));
+};
+
+// MSAL-based authentication hook
+function useMsalAuth(): UseAuthReturn {
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const account = useAccount(accounts[0] || {});
@@ -140,4 +151,25 @@ export function useAuth(): UseAuthReturn {
     hasPermission,
     isLoading,
   };
+}
+
+// Unified auth hook that switches between test and MSAL auth
+export function useAuth(): UseAuthReturn {
+  const testContext = useContext(TestAuthContext);
+  
+  if (isTestMode() && testContext) {
+    return {
+      isAuthenticated: testContext.isAuthenticated,
+      user: testContext.user,
+      backendUser: testContext.backendUser,
+      login: testContext.login,
+      logout: testContext.logout,
+      hasRole: testContext.hasRole,
+      hasPermission: testContext.hasPermission,
+      isLoading: testContext.isLoading,
+    };
+  }
+  
+  // Fall back to MSAL auth
+  return useMsalAuth();
 }

@@ -3,6 +3,7 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 import Layout from '../layouts/shell'
 import { AuthLayout } from '../layouts/auth-layout'
+import { TestDevTools } from '@/components/test-devtools'
 
 export const Route = createRootRoute({
   component: () => {
@@ -16,6 +17,7 @@ export const Route = createRootRoute({
             <Outlet />
           </AuthLayout>
           <TanStackRouterDevtools />
+          <TestDevTools />
         </>
       );
     }
@@ -26,6 +28,7 @@ export const Route = createRootRoute({
           <Outlet />
         </Layout>
         <TanStackRouterDevtools />
+        <TestDevTools />
       </>
     );
   },

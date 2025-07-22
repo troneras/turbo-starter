@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AuthProvider } from './auth-provider';
+import { ConditionalAuthProvider } from './conditional-auth-provider';
 import { QueryProvider } from './query-provider';
 
 interface ProvidersProps {
@@ -8,8 +8,8 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <AuthProvider>
+    <ConditionalAuthProvider>
       <QueryProvider>{children}</QueryProvider>
-    </AuthProvider>
+    </ConditionalAuthProvider>
   );
 }

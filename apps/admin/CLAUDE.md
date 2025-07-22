@@ -368,7 +368,40 @@ VITE_API_BASE_URL=http://localhost:3000
 
 # Azure AD Configuration  
 VITE_MSAL_SCOPES=api://cms-platform/access
+
+# Test Mode (development only)
+VITE_TEST_MODE=false  # Set to 'true' to enable test devtools
 ```
+
+## Test DevTools
+
+### Overview
+The admin app includes a floating devtools panel for testing different user roles during development. This bypasses MSAL authentication and allows quick switching between predefined test users.
+
+### Enabling Test Mode
+
+Test mode can be enabled in three ways:
+1. **Environment Variable**: Set `VITE_TEST_MODE=true` in your `.env` file
+2. **Query Parameter**: Add `?testMode=true` to the URL
+3. **LocalStorage**: Set `localStorage.setItem('test_mode', 'true')`
+
+### Using Test DevTools
+
+When test mode is active:
+1. A floating orange button appears in the bottom-right corner
+2. Click to open the devtools panel
+3. Choose from preset users (Admin, Editor, User) or create custom users
+4. The app behaves as if authenticated with the selected user
+
+### Predefined Test Users
+
+- **Admin**: Full system access with all permissions
+- **Editor**: Content management permissions (create/edit translations)
+- **User**: Read-only access to basic resources
+
+### Security Warning
+
+**NEVER enable test mode in production!** Test authentication bypasses all real security checks and should only be used for development and automated testing.
 
 ## Shared Contracts Integration
 Import only types from shared contracts to avoid importing full TypeBox library
