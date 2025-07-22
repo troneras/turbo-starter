@@ -1,13 +1,5 @@
 import type { Page } from 'puppeteer';
-
-export interface TestUser {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-  permissions: string[];
-  jwt: string;
-}
+import { TEST_USERS, type TestUser } from '../../src/lib/test-users';
 
 /**
  * Authenticates a test user in Puppeteer by injecting test credentials
@@ -42,6 +34,23 @@ export async function authenticateTestUser(page: Page, user: TestUser) {
   await page.waitForFunction(() => {
     const jwt = localStorage.getItem('auth_jwt');
     return jwt !== null;
+  });
+}
+
+/**
+ * Authenticates using query parameters (useful for external automation tools)
+ * @param page - The Puppeteer page instance
+ * @param profile - The test profile name (admin, editor, user)
+ * @param url - Optional base URL (defaults to http://localhost:3000)
+ */
+export async function authenticateWithQueryParams(page: Page, profile: string, url: string = 'http://localhost:3000') {
+  // Navigate directly with test mode and profile
+  await page.goto(`${url}?testMode=true&testProfile=${profile}`);
+  
+  // Wait for the page to load and authentication to complete
+  await page.waitForFunction(() => {
+    const jwt = localStorage.getItem('auth_jwt');
+    return jwt !== null && document.readyState === 'complete';
   });
 }
 
@@ -85,46 +94,19 @@ export function createTestUser(overrides: Partial<TestUser> = {}): TestUser {
  * Creates an admin test user
  */
 export function createAdminTestUser(): TestUser {
-  return createTestUser({
-    id: 'admin-test-123',
-    email: 'admin@example.com',
-    name: 'Admin User',
-    roles: ['admin', 'user'],
-    permissions: [
-      'users:read',
-      'users:create',
-      'users:update',
-      'users:delete',
-      'brands:read',
-      'brands:create',
-      'brands:update',
-      'brands:delete',
-      'translations:read',
-      'translations:create',
-      'translations:update',
-      'translations:delete',
-      'translations:publish'
-    ],
-    jwt: 'mock-admin-jwt-token'
-  });
+  return TEST_USERS.admin;
 }
 
 /**
  * Creates an editor test user
  */
 export function createEditorTestUser(): TestUser {
-  return createTestUser({
-    id: 'editor-test-123',
-    email: 'editor@example.com',
-    name: 'Editor User',
-    roles: ['editor', 'user'],
-    permissions: [
-      'users:read',
-      'brands:read',
-      'translations:read',
-      'translations:create',
-      'translations:update'
-    ],
-    jwt: 'mock-editor-jwt-token'
-  });
+  return TEST_USERS.editor;
+}
+
+/**
+ * Creates a basic test user
+ */
+export function createBasicTestUser(): TestUser {
+  return TEST_USERS.user;
 }

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { TEST_USERS, type TestUser } from '@/lib/test-users';
 
 // Check if we're in test mode
 const isTestMode = () => {
@@ -13,51 +14,6 @@ const isTestMode = () => {
            window.location.search.includes('testMode=true') ||
            localStorage.getItem('test_mode') === 'true'
          ));
-};
-
-interface TestUser {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-  permissions: string[];
-  jwt: string;
-}
-
-// Predefined test users
-const TEST_USERS: Record<string, TestUser> = {
-  admin: {
-    id: 'admin-test-123',
-    email: 'admin@example.com',
-    name: 'Admin User',
-    roles: ['admin', 'user'],
-    permissions: [
-      'users:read', 'users:create', 'users:update', 'users:delete',
-      'brands:read', 'brands:create', 'brands:update', 'brands:delete',
-      'translations:read', 'translations:create', 'translations:update', 'translations:delete', 'translations:publish'
-    ],
-    jwt: 'mock-admin-jwt-token'
-  },
-  editor: {
-    id: 'editor-test-123',
-    email: 'editor@example.com',
-    name: 'Editor User',
-    roles: ['editor', 'user'],
-    permissions: [
-      'users:read',
-      'brands:read',
-      'translations:read', 'translations:create', 'translations:update'
-    ],
-    jwt: 'mock-editor-jwt-token'
-  },
-  user: {
-    id: 'user-test-123',
-    email: 'user@example.com',
-    name: 'Basic User',
-    roles: ['user'],
-    permissions: ['users:read', 'brands:read', 'translations:read'],
-    jwt: 'mock-user-jwt-token'
-  }
 };
 
 export function TestDevTools() {

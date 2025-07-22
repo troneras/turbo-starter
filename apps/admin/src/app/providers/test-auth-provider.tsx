@@ -2,18 +2,10 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { AccountInfo } from '@azure/msal-browser';
 import type { UseAuthReturn } from '../hooks/use-auth';
+import { getTestUser, type TestUser } from '@/lib/test-users';
 
 interface TestAuthContextValue extends UseAuthReturn {
   setTestUser: (user: TestUser | null) => void;
-}
-
-interface TestUser {
-  id: string;
-  email: string;
-  name: string;
-  roles: string[];
-  permissions: string[];
-  jwt: string;
 }
 
 export const TestAuthContext = createContext<TestAuthContextValue | null>(null);
@@ -28,6 +20,38 @@ export function TestAuthProvider({ children, initialUser }: TestAuthProviderProp
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    // Check URL parameters first for auto-login
+    const urlParams = new URLSearchParams(window.location.search);
+    const testProfile = urlParams.get('testProfile');
+    
+    if (testProfile) {
+      const predefinedUser = getTestUser(testProfile);
+      if (predefinedUser) {
+        // Auto-login with the specified test profile
+        setTestUser(predefinedUser);
+        localStorage.setItem('test_mode', 'true');
+        localStorage.setItem('auth_jwt', predefinedUser.jwt);
+        localStorage.setItem('test_jwt', predefinedUser.jwt);
+        localStorage.setItem('test_user', JSON.stringify({
+          id: predefinedUser.id,
+          email: predefinedUser.email,
+          name: predefinedUser.name,
+          roles: predefinedUser.roles,
+          permissions: predefinedUser.permissions
+        }));
+        setIsLoading(false);
+        
+        // Remove the query parameters from URL to clean it up
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('testMode');
+        newUrl.searchParams.delete('testProfile');
+        window.history.replaceState({}, '', newUrl.toString());
+        return;
+      } else {
+        console.warn(`Unknown test profile: ${testProfile}. Available profiles: admin, editor, user`);
+      }
+    }
+    
     // Check for test JWT in localStorage (set by Puppeteer)
     const testJwt = localStorage.getItem('test_jwt');
     const testUserData = localStorage.getItem('test_user');
@@ -95,7 +119,7 @@ export function TestAuthProvider({ children, initialUser }: TestAuthProviderProp
     hasRole,
     hasPermission,
     isLoading,
-    setTestUser: (user) => {
+    setTestUser: (user: TestUser | null) => {
       setTestUser(user);
       if (user) {
         localStorage.setItem('auth_jwt', user.jwt);

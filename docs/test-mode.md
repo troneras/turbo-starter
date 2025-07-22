@@ -39,7 +39,7 @@ Test mode provides a way to bypass real authentication (MSAL/Azure AD) during de
 
 ### Frontend
 
-Three ways to enable:
+Four ways to enable:
 
 1. **Environment Variable**
    ```bash
@@ -52,7 +52,14 @@ Three ways to enable:
    http://localhost:3000?testMode=true
    ```
 
-3. **LocalStorage**
+3. **Query Parameter with Auto-Login**
+   ```
+   http://localhost:3000?testMode=true&testProfile=admin
+   http://localhost:3000?testMode=true&testProfile=editor
+   http://localhost:3000?testMode=true&testProfile=user
+   ```
+
+4. **LocalStorage**
    ```javascript
    localStorage.setItem('test_mode', 'true')
    ```
@@ -121,7 +128,7 @@ Features:
 
 ## E2E Testing with Puppeteer
 
-Example test setup:
+### Method 1: Direct Authentication
 
 ```javascript
 import { authenticateTestUser, createAdminTestUser } from '../setup/auth';
@@ -131,6 +138,47 @@ await authenticateTestUser(page, createAdminTestUser());
 
 // Now the page is authenticated and can access protected routes
 await page.goto('http://localhost:3000/users');
+```
+
+### Method 2: Query Parameter Authentication
+
+```javascript
+import { authenticateWithQueryParams } from '../setup/auth';
+
+// Authenticate as admin using query params
+await authenticateWithQueryParams(page, 'admin');
+
+// Or navigate directly with authentication
+await page.goto('http://localhost:3000/users?testMode=true&testProfile=editor');
+```
+
+## External Automation Tools
+
+The query parameter method is particularly useful for external automation tools that can't easily inject localStorage data:
+
+### Selenium Example
+```python
+driver.get("http://localhost:3000?testMode=true&testProfile=admin")
+# User is automatically logged in as admin
+```
+
+### Cypress Example
+```javascript
+cy.visit('http://localhost:3000?testMode=true&testProfile=editor')
+// User is automatically logged in as editor
+```
+
+### Playwright Example
+```javascript
+await page.goto('http://localhost:3000?testMode=true&testProfile=user');
+// User is automatically logged in as basic user
+```
+
+### cURL Example
+```bash
+# Test API endpoints with authenticated user
+curl -H "Authorization: Bearer mock-admin-jwt-token" \
+     http://localhost:3000/api/users
 ```
 
 ## Security Considerations

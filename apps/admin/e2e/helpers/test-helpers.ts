@@ -1,7 +1,8 @@
 import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
 import { puppeteerConfig, testConfig } from '../puppeteer.config';
-import { authenticateTestUser, createAdminTestUser, type TestUser } from '../setup/auth';
+import { authenticateTestUser, createAdminTestUser } from '../setup/auth';
+import type { TestUser } from '../../src/lib/test-users';
 
 export interface TestContext {
   browser: Browser;
