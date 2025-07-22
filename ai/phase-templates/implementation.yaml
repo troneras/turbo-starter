@@ -1,0 +1,93 @@
+# ai/phase-templates/implementation.yaml
+name: "Implementation"
+description: "Execute the technical implementation based on design"
+
+agent_requirements:
+  - type: "backend-dev"
+    required: true
+    condition: "backend_implementation_needed"
+  - type: "frontend-dev"
+    required: true  
+    condition: "frontend_implementation_needed"
+
+sequential_coordination: true
+sequence: ["backend_implementation", "frontend_implementation"]
+
+tasks:
+  - name: "backend_implementation"
+    assigned_to: "backend-dev"
+    template: |
+      TASK: Implement Backend Changes
+      
+      CONTEXT DEPENDENCIES:
+      - Read design_document.md
+      - Follow api_specification.yaml
+      - Check shared context for implementation details
+      
+      OBJECTIVES:
+      1. Implement database schema changes
+      2. Create/modify API endpoints
+      3. Implement business logic
+      4. Add appropriate tests
+      5. Update API documentation
+      
+      IMPLEMENTATION CHECKLIST:
+      - [ ] Database migrations created
+      - [ ] API endpoints implemented per spec
+      - [ ] Business logic implemented and tested
+      - [ ] Error handling implemented
+      - [ ] Security measures in place
+      - [ ] Performance optimizations applied
+      
+      UPDATE SHARED CONTEXT WITH:
+      - implementation_status: "backend_complete"
+      - api_endpoints_ready: [List of implemented endpoints]
+      - testing_status: [Unit/integration test results]
+      - deployment_notes: [Any deployment considerations]
+
+  - name: "frontend_implementation"
+    assigned_to: "frontend-dev"
+    dependencies: ["backend_implementation"]
+    template: |
+      TASK: Implement Frontend Changes
+      
+      CONTEXT DEPENDENCIES:
+      - Wait for implementation_status: "backend_complete"
+      - Read component_specifications.md
+      - Check api_endpoints_ready in shared context
+      
+      OBJECTIVES:
+      1. Implement UI components per design
+      2. Integrate with backend APIs
+      3. Implement state management
+      4. Add user interaction handling
+      5. Ensure responsive design
+      6. Add appropriate tests
+      
+      IMPLEMENTATION CHECKLIST:
+      - [ ] Components implemented per spec
+      - [ ] API integration working
+      - [ ] State management implemented  
+      - [ ] User flows working end-to-end
+      - [ ] Responsive design verified
+      - [ ] Accessibility requirements met
+      - [ ] Frontend tests passing
+      
+      UPDATE SHARED CONTEXT WITH:
+      - implementation_status: "frontend_complete"
+      - component_status: [Status of each component]
+      - integration_status: [API integration results]
+      - testing_status: [Frontend test results]
+
+outputs:
+  - "implementation_summary.md"
+  - Updated codebase
+  - Test results
+
+quality_gates:
+  - name: "code_quality"
+    check: "Code follows project standards and passes linting"
+  - name: "test_coverage"
+    check: "Adequate test coverage for new functionality"
+  - name: "integration_success"
+    check: "Frontend and backend integrate successfully"

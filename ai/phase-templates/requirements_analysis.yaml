@@ -1,0 +1,63 @@
+# ai/phase-templates/requirements_analysis.yaml
+name: "Requirements Analysis"
+description: "Analyze specifications and identify architectural impact"
+
+agent_requirements:
+  - type: "team-lead"
+    required: true
+  - type: "domain-specialists" 
+    required: false
+    condition: "complex_domain_logic_detected"
+
+tasks:
+  - name: "analyze_specification"
+    template: |
+      TASK: Analyze Specification Document
+      
+      OBJECTIVES:
+      1. Extract functional requirements from specification
+      2. Identify non-functional requirements (performance, security, etc.)
+      3. Map requirements to existing system components
+      4. Flag potential architectural impacts
+      
+      DELIVERABLES:
+      - Requirements breakdown in shared context
+      - Architectural impact assessment
+      - Risk factors and unknowns identified
+      
+      UPDATE SHARED CONTEXT WITH:
+      - requirement_list: [List of functional requirements]
+      - nonfunctional_requirements: [Performance, security, etc.]
+      - architectural_impact: [Components that will be affected]
+      - risk_factors: [Potential issues or unknowns]
+
+  - name: "identify_domain_complexity"
+    template: |
+      TASK: Assess Domain Complexity
+      
+      OBJECTIVES:
+      1. Determine if specialized domain knowledge is needed
+      2. Identify which domain experts should be involved
+      3. Assess complexity level for planning purposes
+      
+      DECISION LOGIC:
+      - IF touches authentication → spawn auth-specialist
+      - IF involves payments → spawn payment-specialist  
+      - IF complex business logic → spawn domain-specialists
+      
+      UPDATE SHARED CONTEXT WITH:
+      - complexity_level: [low|medium|high]
+      - required_specialists: [List of domain experts needed]
+      - domain_risks: [Domain-specific risks identified]
+
+outputs:
+  - "requirements_summary.md"
+  - shared_context_updates
+
+quality_gates:
+  - name: "requirements_completeness"
+    check: "All spec requirements extracted and categorized"
+  - name: "architectural_clarity"  
+    check: "Impact on existing architecture clearly identified"
+  - name: "risk_assessment"
+    check: "Major risks and unknowns documented"

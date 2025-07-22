@@ -24,6 +24,10 @@
     "packages/*"
   ],
   "dependencies": {
+    "@azure/msal-browser": "^4.15.0",
+    "@azure/msal-react": "^3.0.15",
+    "@tanstack/react-query": "^5.83.0",
+    "axios": "^1.10.0",
     "close-with-grace": "^2.2.0",
     "fastify-cli": "^7.4.0"
   }

@@ -1,0 +1,64 @@
+# agent-registry.yaml
+agents:
+  team-lead:
+    name: "Development Team Lead"
+    description: "Orchestrates complex feature development, coordinates between specialized agents, and makes architectural decisions"
+    domain: "project-coordination"
+    prompt_file: "prompts/team-lead.md"
+    capabilities:
+      - "feature-planning"
+      - "agent-coordination" 
+      - "architecture-decisions"
+      - "cross-domain-integration"
+    spawns: ["backend-dev", "frontend-dev", "qa-specialist"]
+    
+  backend-dev:
+    name: "Backend Specialist"
+    description: "Deep expertise in API design, database architecture, and server-side business logic"
+    domain: "backend-development"
+    prompt_file: "prompts/backend-specialist.md"
+    capabilities:
+      - "api-design"
+      - "database-modeling"
+      - "business-logic"
+      - "performance-optimization"
+    dependencies: ["database-admin"]
+    
+  frontend-dev:
+    name: "Frontend Specialist" 
+    description: "Expert in React components, state management, and user experience patterns"
+    domain: "frontend-development"
+    prompt_file: "prompts/frontend-specialist.md"
+    capabilities:
+      - "component-architecture"
+      - "state-management"
+      - "ui-patterns"
+      - "performance-optimization"
+    
+  # Feature-specific agents
+  auth-specialist:
+    name: "Authentication Domain Expert"
+    description: "Specialized knowledge of authentication flows, security patterns, and user management"
+    domain: "authentication"
+    prompt_file: "prompts/features/auth-specialist.md"
+    parent_domains: ["backend-development", "frontend-development"]
+    capabilities:
+      - "jwt-handling"
+      - "oauth-flows"
+      - "session-management"
+      - "security-patterns"
+
+# Agent interaction patterns
+communication_patterns:
+  shared_context_file: ".agent-context/shared-state.md"
+  coordination_protocols:
+    - "status-updates"
+    - "dependency-notifications"
+    - "conflict-resolution"
+    
+hierarchies:
+  development:
+    lead: "team-lead"
+    specialists: ["backend-dev", "frontend-dev"]
+    domain_experts: ["auth-specialist"]
+    

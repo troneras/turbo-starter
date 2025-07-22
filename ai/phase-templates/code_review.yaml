@@ -1,0 +1,34 @@
+# ai/phase-templates/code_review.yaml
+name: "Code Review"
+description: "Review implementation for quality and compliance"
+
+agent_requirements:
+  - type: "senior-dev"
+    required: true
+  - type: "security-specialist"
+    required: false
+    condition: "security_sensitive_changes"
+
+tasks:
+  - name: "technical_review"
+    template: |
+      TASK: Technical Code Review
+      
+      OBJECTIVES:
+      1. Review code quality and standards compliance
+      2. Check for potential bugs or issues
+      3. Validate design pattern adherence
+      4. Assess performance implications
+      
+      REVIEW CHECKLIST:
+      - [ ] Code follows project coding standards
+      - [ ] No obvious bugs or logic errors
+      - [ ] Proper error handling implemented
+      - [ ] Security best practices followed
+      - [ ] Performance considerations addressed
+      - [ ] Documentation is adequate
+      
+      UPDATE SHARED CONTEXT WITH:
+      - review_status: [approved|needs_changes|rejected]
+      - issues_found: [List of issues that need addressing]
+      - recommendations: [Suggestions for improvement]

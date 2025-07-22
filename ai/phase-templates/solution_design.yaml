@@ -1,0 +1,98 @@
+# ai/phase-templates/solution_design.yaml
+name: "Solution Design"
+description: "Create comprehensive technical design for implementation"
+
+agent_requirements:
+  - type: "backend-dev"
+    required: true
+    condition: "backend_changes_needed"
+  - type: "frontend-dev" 
+    required: true
+    condition: "ui_changes_needed"
+  - type: "domain-specialists"
+    required: false
+    condition: "from_previous_phase"
+
+parallel_coordination: true
+
+tasks:
+  - name: "design_data_layer"
+    assigned_to: "backend-dev"
+    template: |
+      TASK: Design Data Layer Changes
+      
+      CONTEXT DEPENDENCIES:
+      - Read requirements_summary.md
+      - Check shared context for data requirements
+      
+      OBJECTIVES:
+      1. Design database schema changes
+      2. Plan data migration strategy (if needed)
+      3. Define data access patterns
+      4. Consider performance implications
+      
+      COORDINATE WITH:
+      - frontend-dev: Share data contracts
+      - domain-specialists: Validate business rules
+      
+      UPDATE SHARED CONTEXT WITH:
+      - database_changes: [Schema modifications needed]
+      - data_contracts: [API response/request formats]
+      - migration_plan: [Steps for data migration]
+      - performance_considerations: [Indexing, caching needs]
+
+  - name: "design_api_layer"
+    assigned_to: "backend-dev"
+    dependencies: ["design_data_layer"]
+    template: |
+      TASK: Design API Layer
+      
+      OBJECTIVES:
+      1. Define API endpoints and contracts
+      2. Plan authentication/authorization
+      3. Design error handling strategy
+      4. Consider rate limiting and caching
+      
+      COORDINATE WITH:
+      - frontend-dev: Ensure API meets UI needs
+      - domain-specialists: Validate business logic
+      
+      UPDATE SHARED CONTEXT WITH:
+      - api_endpoints: [List of new/modified endpoints]
+      - authentication_strategy: [How auth will work]
+      - error_handling: [Error codes and messages]
+      - caching_strategy: [What and how to cache]
+
+  - name: "design_ui_layer"
+    assigned_to: "frontend-dev"
+    template: |
+      TASK: Design UI Layer
+      
+      CONTEXT DEPENDENCIES:
+      - Wait for api_endpoints from backend-dev
+      - Read requirements for user experience needs
+      
+      OBJECTIVES:
+      1. Design component hierarchy
+      2. Plan state management strategy
+      3. Design user interaction flows
+      4. Consider accessibility requirements
+      
+      UPDATE SHARED CONTEXT WITH:
+      - component_design: [Component structure and props]
+      - state_management: [How state will be handled]
+      - user_flows: [Step-by-step user interactions]
+      - accessibility_plan: [A11y considerations]
+
+outputs:
+  - "design_document.md"
+  - "api_specification.yaml"
+  - "component_specifications.md"
+
+quality_gates:
+  - name: "design_completeness"
+    check: "All layers designed and documented"
+  - name: "integration_clarity" 
+    check: "How components integrate is clearly defined"
+  - name: "no_conflicts"
+    check: "No conflicting decisions between agents"

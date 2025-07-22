@@ -1,0 +1,19 @@
+# ai/workflows/bug-investigation.yaml
+name: "Bug Investigation"
+description: "Investigate and fix bugs"
+
+phases:
+  - name: "problem_analysis"
+    type: "sequential"
+    agents: ["team-lead"]
+    tasks: ["analyze_bug_report", "reproduce_issue"]
+    
+  - name: "root_cause_analysis"  
+    type: "parallel"
+    agents: ["backend-dev", "frontend-dev"]
+    tasks: ["investigate_backend_logs", "investigate_frontend_behavior"]
+    
+  - name: "solution_implementation"
+    type: "sequential"
+    agents: ["domain-specialists"]
+    tasks: ["implement_fix", "add_regression_tests"]

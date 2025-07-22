@@ -1,0 +1,50 @@
+# ai/workflows/feature-implementation.yaml
+name: "Feature Implementation"
+description: "Full feature development from spec to deployment"
+
+phases:
+  - name: "requirements_analysis"
+    type: "sequential"
+    agents: ["team-lead"]
+    tasks:
+      - "analyze_specification"
+      - "identify_architectural_impact"
+    outputs: ["requirements_summary.md"]
+    
+  - name: "solution_design"
+    type: "parallel"
+    agents: ["backend-dev", "frontend-dev", "domain-specialists"]
+    tasks:
+      - "design_api_contracts"
+      - "design_ui_components" 
+      - "design_database_changes"
+    outputs: ["design_document.md"]
+    quality_gates:
+      - "all_requirements_addressed"
+      - "no_architectural_conflicts"
+      
+  - name: "implementation"
+    type: "sequential"
+    agents: ["backend-dev", "frontend-dev"]
+    dependencies: ["solution_design"]
+    tasks:
+      - "implement_backend_changes"
+      - "implement_frontend_changes"
+    outputs: ["implementation_summary.md"]
+
+  - name: "code_review"
+    type: "sequential"
+    agents: ["senior-dev"]
+    dependencies: ["implementation"]
+    tasks:
+      - "technical_review"
+    outputs: ["code_review_report.md"]
+
+  - name: "integration_testing"
+    type: "sequential" 
+    agents: ["qa-specialist"]
+    dependencies: ["implementation"]
+    tasks:
+      - "validate_implementation"
+      - "run_integration_tests"
+    outputs: ["test_report.md"]
