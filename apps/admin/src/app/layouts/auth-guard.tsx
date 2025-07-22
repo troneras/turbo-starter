@@ -9,21 +9,32 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       navigate({ to: '/login' });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <LoadingSpinner size="lg" />
+          <h2 className="text-xl font-semibold">Checking authentication...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
           <LoadingSpinner size="lg" />
-          <h2 className="text-xl font-semibold">Checking authentication...</h2>
+          <h2 className="text-xl font-semibold">Redirecting to login...</h2>
         </div>
       </div>
     );

@@ -164,7 +164,7 @@ fastify.post('/users', {
 import type { CreateUser } from '@cms/contracts/types/users'
 
 const createUser = async (data: CreateUser) => {
-  return apiClient.post<User>('/api/users', data) // Type-safe
+  return apiClient.post<User>('/users', data) // Type-safe
 }
 ```
 

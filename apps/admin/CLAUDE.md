@@ -199,7 +199,7 @@ import { apiClient } from '@/lib/api-client'
 **Without TanStack Query** (basic):
 ```typescript
 const fetchUsers = async () => {
-  const response = await apiClient.get('/api/users')
+  const response = await apiClient.get('/users')
   return response.data
 }
 ```
@@ -213,7 +213,7 @@ const useUsers = () => {
   return useQuery({
     queryKey: ['users'],
     queryFn: async () => {
-      const response = await apiClient.get<User[]>('/api/users')
+      const response = await apiClient.get<User[]>('/users')
       return response.data
     }
   })
@@ -380,7 +380,7 @@ import type { User, CreateUserRequest } from '@cms/contracts/types/users'
 
 // Full type safety between frontend and backend
 const createUser = async (userData: CreateUserRequest): Promise<User> => {
-  const response = await apiClient.post<User>('/api/users', userData)
+  const response = await apiClient.post<User>('/users', userData)
   return response.data
 }
 ```

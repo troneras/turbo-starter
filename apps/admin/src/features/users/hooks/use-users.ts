@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
-import type { 
+import type {
   ListUsersResponse,
   UserWithRoles,
   BulkAssignRoleRequest,
@@ -41,7 +41,7 @@ export function useUsers({ filters, sort, page = 1, pageSize = 25 }: UseUsersOpt
         params.sortDirection = sort.direction;
       }
 
-      const response = await apiClient.get<ListUsersResponse>('/api/users', { params });
+      const response = await apiClient.get<ListUsersResponse>('/users', { params });
       return response.data;
     },
   });
@@ -51,7 +51,7 @@ export function useRoles() {
   return useQuery({
     queryKey: ['roles'],
     queryFn: async (): Promise<string[]> => {
-      const response = await apiClient.get<{ roles: Array<{ name: string }> }>('/api/roles');
+      const response = await apiClient.get<{ roles: Array<{ name: string }> }>('/roles');
       return response.data.roles.map(role => role.name);
     },
   });
@@ -63,7 +63,7 @@ export function useBulkAssignRole() {
   return useMutation({
     mutationFn: async (data: BulkAssignRoleRequest): Promise<BulkAssignRoleResponse> => {
       const response = await apiClient.post<BulkAssignRoleResponse>(
-        '/api/users/bulk-assign-role',
+        '/users/bulk-assign-role',
         data
       );
       return response.data;
@@ -80,7 +80,7 @@ export function useBulkDeactivate() {
   return useMutation({
     mutationFn: async (data: BulkDeactivateRequest): Promise<BulkDeactivateResponse> => {
       const response = await apiClient.post<BulkDeactivateResponse>(
-        '/api/users/bulk-deactivate',
+        '/users/bulk-deactivate',
         data
       );
       return response.data;
@@ -95,15 +95,15 @@ export function useUpdateUserStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      userId, 
-      status 
-    }: { 
-      userId: string; 
-      status: 'active' | 'inactive' 
+    mutationFn: async ({
+      userId,
+      status
+    }: {
+      userId: string;
+      status: 'active' | 'inactive'
     }): Promise<UpdateUserStatusResponse> => {
       const response = await apiClient.patch<UpdateUserStatusResponse>(
-        `/api/users/${userId}/status`,
+        `/users/${userId}/status`,
         { status }
       );
       return response.data;
@@ -128,7 +128,7 @@ export function useUpdateUserRoles() {
       reason?: string;
     }): Promise<UserWithRoles> => {
       const response = await apiClient.patch<UserWithRoles>(
-        `/api/users/${userId}`,
+        `/users/${userId}`,
         { roles, reason }
       );
       return response.data;

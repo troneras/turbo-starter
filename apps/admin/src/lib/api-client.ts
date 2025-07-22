@@ -1,13 +1,9 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-let msalInstance: any = null;
-let accounts: any[] = [];
-
-// This will be initialized after MSAL is ready
+// Legacy MSAL instance management - kept for compatibility
 export const setMsalInstance = (instance: any, accountList: any[]) => {
-  msalInstance = instance;
-  accounts = accountList;
+  // No longer needed since we use JWT tokens directly
 };
 
 const apiClient: AxiosInstance = axios.create({
@@ -21,19 +17,15 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   async (config) => {
-    if (msalInstance && accounts.length > 0) {
-      try {
-        const silentRequest = {
-          scopes: [import.meta.env.VITE_MSAL_SCOPES],
-          account: accounts[0],
-        };
+    // Skip auth for the login endpoint itself
+    if (config.url?.includes('/auth/login')) {
+      return config;
+    }
 
-        const response = await msalInstance.acquireTokenSilent(silentRequest);
-        config.headers.Authorization = `Bearer ${response.accessToken}`;
-      } catch (error) {
-        console.warn('Silent token acquisition failed:', error);
-        // Continue without token - let the API handle unauthorized requests
-      }
+    // Use stored JWT for API calls
+    const jwt = localStorage.getItem('auth_jwt');
+    if (jwt) {
+      config.headers.Authorization = `Bearer ${jwt}`;
     }
 
     return config;
