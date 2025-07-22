@@ -29,6 +29,20 @@
       "when": 1752589228961,
       "tag": "0003_mean_thanos",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1753182331986,
+      "tag": "0004_smart_golden_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1753182500000,
+      "tag": "0005_user_search_indexes",
+      "breakpoints": true
     }
   ]
 }

@@ -2,8 +2,8 @@ import fp from 'fastify-plugin'
 import jwt from '@fastify/jwt'
 import type { FastifyInstance } from 'fastify'
 import { createHash } from 'crypto'
-import { eq } from 'drizzle-orm'
-import { users, serviceTokens, roles, userRoles, permissions, rolePermissions } from '@cms/db/schema'
+import { eq, sql } from 'drizzle-orm'
+import { users, serviceTokens, roles, userRoles, permissions, rolePermissions, userAuditLogs } from '@cms/db/schema'
 
 
 declare module 'fastify' {
@@ -31,6 +31,41 @@ export function authPlugin(fastify: FastifyInstance) {
 
 
     return {
+        // Determine role for new user (admin bootstrap logic)
+        async determineNewUserRole(): Promise<string> {
+            return await fastify.db.transaction(async (tx) => {
+                // Count current admin users with SELECT FOR UPDATE to prevent race conditions
+                const adminCount = await tx
+                    .select({ count: sql<number>`count(*)` })
+                    .from(users)
+                    .innerJoin(userRoles, eq(users.id, userRoles.userId))
+                    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+                    .where(eq(roles.name, 'admin'))
+                
+                const currentAdminCount = Number(adminCount[0]?.count || 0)
+                
+                // First 10 users get admin role, rest get user role
+                return currentAdminCount < 10 ? 'admin' : 'user'
+            })
+        },
+
+        // Log audit event for user management actions
+        async logAuditEvent(targetUserId: string, performedBy: string | null, action: string, oldValue: any = null, newValue: any = null, reason: string | null = null, isAutomatic: boolean = false) {
+            if (!performedBy) return // Skip logging for system actions without actor
+            
+            await fastify.db
+                .insert(userAuditLogs)
+                .values({
+                    targetUserId,
+                    performedBy,
+                    action,
+                    oldValue: oldValue ? JSON.stringify(oldValue) : null,
+                    newValue: newValue ? JSON.stringify(newValue) : null,
+                    reason,
+                    isAutomatic
+                })
+        },
+
         // Azure AD token validation
 
         async validateAzureToken(token: string): Promise<AuthUser> {
@@ -39,43 +74,64 @@ export function authPlugin(fastify: FastifyInstance) {
                 const decoded = JSON.parse(Buffer.from(token, 'base64').toString())
 
                 // Find or create user
-                let [user] = await fastify.db
+                const existingUsers = await fastify.db
                     .select()
                     .from(users)
                     .where(eq(users.email, decoded.email))
                     .limit(1)
+                
+                let user = existingUsers[0]
 
                 if (!user) {
+                    // Determine role for new user (admin bootstrap logic)
+                    const assignedRoleName = await this.determineNewUserRole()
+                    
                     // Create new user from Azure AD
-                    [user] = await fastify.db
+                    const createdUsers = await fastify.db
                         .insert(users)
                         .values({
                             email: decoded.email,
                             name: decoded.name,
                             azure_ad_oid: decoded.oid,
                             azure_ad_tid: decoded.tid,
-                            last_login_at: new Date()
+                            last_login_at: new Date(),
+                            status: 'active'
                         })
                         .returning()
+                    
+                    user = createdUsers[0]
 
                     if (!user) {
                         throw fastify.httpErrors.internalServerError('Failed to create user')
                     }
 
-                    // Assign default user role
-                    const [userRole] = await fastify.db
+                    // Assign determined role (admin for first 10 users, user for rest)
+                    const roleResults = await fastify.db
                         .select()
                         .from(roles)
-                        .where(eq(roles.name, 'user'))
+                        .where(eq(roles.name, assignedRoleName))
                         .limit(1)
+                    
+                    const assignedRole = roleResults[0]
 
-                    if (userRole) {
+                    if (assignedRole) {
                         await fastify.db
                             .insert(userRoles)
                             .values({
                                 userId: user.id,
-                                roleId: userRole.id
+                                roleId: assignedRole.id
                             })
+                        
+                        // Log audit event for automatic role assignment
+                        await this.logAuditEvent(
+                            user.id,
+                            user.id, // Self-assigned on creation
+                            'role_assigned',
+                            null,
+                            { role: assignedRoleName },
+                            'Automatic role assignment on user creation',
+                            true
+                        )
                     }
                 } else {
                     // Update last login
@@ -129,11 +185,13 @@ export function authPlugin(fastify: FastifyInstance) {
                 // Hash the token to compare with stored hash
                 const tokenHash = createHash('sha256').update(token).digest('hex')
 
-                const [serviceToken] = await fastify.db
+                const serviceTokenResults = await fastify.db
                     .select()
                     .from(serviceTokens)
                     .where(eq(serviceTokens.token_hash, tokenHash))
                     .limit(1)
+                
+                const serviceToken = serviceTokenResults[0]
 
                 if (!serviceToken) {
                     throw fastify.httpErrors.unauthorized('Invalid service token')

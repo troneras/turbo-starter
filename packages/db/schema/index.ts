@@ -7,6 +7,8 @@ export const users = pgTable('users', {
     azure_ad_oid: varchar('azure_ad_oid', { length: 255 }),
     azure_ad_tid: varchar('azure_ad_tid', { length: 255 }),
     last_login_at: timestamp('last_login_at'),
+    status: varchar('status', { length: 20 }).default('active').notNull(),
+    created_by: uuid('created_by'),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -160,6 +162,18 @@ export const rolePermissions = pgTable('role_permissions', {
     primaryKey({ columns: [table.roleId, table.permissionId] }),
 ]);
 
+export const userAuditLogs = pgTable('user_audit_logs', {
+    id: serial('id').primaryKey(),
+    targetUserId: uuid('target_user_id').references(() => users.id).notNull(),
+    performedBy: uuid('performed_by').references(() => users.id).notNull(),
+    action: varchar('action', { length: 50 }).notNull(),
+    oldValue: jsonb('old_value'),
+    newValue: jsonb('new_value'),
+    reason: text('reason'),
+    isAutomatic: boolean('is_automatic').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // Type exports
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -214,3 +228,6 @@ export type NewPermission = typeof permissions.$inferInsert
 
 export type RolePermission = typeof rolePermissions.$inferSelect
 export type NewRolePermission = typeof rolePermissions.$inferInsert
+
+export type UserAuditLog = typeof userAuditLogs.$inferSelect
+export type NewUserAuditLog = typeof userAuditLogs.$inferInsert

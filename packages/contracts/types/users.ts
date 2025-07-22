@@ -10,7 +10,14 @@ import {
     UpdateUserParamsSchema,
     UpdateUserRequestSchema,
     UpdateUserResponseSchema,
-    DeleteUserParamsSchema
+    DeleteUserParamsSchema,
+    UpdateUserStatusParamsSchema,
+    UpdateUserStatusRequestSchema,
+    UpdateUserStatusResponseSchema,
+    BulkAssignRoleRequestSchema,
+    BulkAssignRoleResponseSchema,
+    BulkDeactivateRequestSchema,
+    BulkDeactivateResponseSchema
 } from "../schemas/users.js"
 
 /**
@@ -214,4 +221,123 @@ export type UpdateUserResponse = Static<typeof UpdateUserResponseSchema>
  * }
  * ```
  */
-export type DeleteUserParams = Static<typeof DeleteUserParamsSchema> 
+export type DeleteUserParams = Static<typeof DeleteUserParamsSchema>
+
+/**
+ * Path parameters for user status update operations.
+ * 
+ * @description Contains the user ID from the URL path for status update operations.
+ * 
+ * @example
+ * ```typescript
+ * const params: UpdateUserStatusParams = {
+ *   id: "user-123"
+ * }
+ * ```
+ */
+export type UpdateUserStatusParams = Static<typeof UpdateUserStatusParamsSchema>
+
+/**
+ * Request payload for updating user status.
+ * 
+ * @description Data required to change a user's status between active and inactive.
+ * 
+ * @example
+ * ```typescript
+ * const request: UpdateUserStatusRequest = {
+ *   status: "inactive"
+ * }
+ * ```
+ */
+export type UpdateUserStatusRequest = Static<typeof UpdateUserStatusRequestSchema>
+
+/**
+ * Response after successfully updating user status.
+ * 
+ * @description Returns the user information with the updated status.
+ * 
+ * @example
+ * ```typescript
+ * const response: UpdateUserStatusResponse = {
+ *   id: "user-123",
+ *   email: "john.doe@example.com",
+ *   name: "John Doe",
+ *   status: "inactive"
+ * }
+ * ```
+ */
+export type UpdateUserStatusResponse = Static<typeof UpdateUserStatusResponseSchema>
+
+/**
+ * Request payload for bulk role assignment.
+ * 
+ * @description Data required to assign a role to multiple users simultaneously.
+ * Maximum of 100 users can be processed in a single request.
+ * 
+ * @example
+ * ```typescript
+ * const request: BulkAssignRoleRequest = {
+ *   userIds: ["user-123", "user-456", "user-789"],
+ *   roleName: "editor",
+ *   reason: "Promotion to content editors"
+ * }
+ * ```
+ */
+export type BulkAssignRoleRequest = Static<typeof BulkAssignRoleRequestSchema>
+
+/**
+ * Response after bulk role assignment operation.
+ * 
+ * @description Contains operation results including success count, skipped count,
+ * and detailed error information for any failed assignments.
+ * 
+ * @example
+ * ```typescript
+ * const response: BulkAssignRoleResponse = {
+ *   success: true,
+ *   processedCount: 2,
+ *   skippedCount: 1,
+ *   errors: [
+ *     {
+ *       userId: "user-789",
+ *       error: "User already has this role"
+ *     }
+ *   ]
+ * }
+ * ```
+ */
+export type BulkAssignRoleResponse = Static<typeof BulkAssignRoleResponseSchema>
+
+/**
+ * Request payload for bulk user deactivation.
+ * 
+ * @description Data required to deactivate multiple users simultaneously.
+ * Maximum of 100 users can be processed in a single request.
+ * 
+ * @example
+ * ```typescript
+ * const request: BulkDeactivateRequest = {
+ *   userIds: ["user-123", "user-456"],
+ *   reason: "Account cleanup - inactive users"
+ * }
+ * ```
+ */
+export type BulkDeactivateRequest = Static<typeof BulkDeactivateRequestSchema>
+
+/**
+ * Response after bulk user deactivation operation.
+ * 
+ * @description Contains operation results including success count, skipped count,
+ * and detailed error information for any failed deactivations.
+ * 
+ * @example
+ * ```typescript
+ * const response: BulkDeactivateResponse = {
+ *   success: true,
+ *   processedCount: 2,
+ *   skippedCount: 0,
+ *   errors: []
+ * }
+ * ```
+ */
+export type BulkDeactivateResponse = Static<typeof BulkDeactivateResponseSchema> 

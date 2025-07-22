@@ -224,6 +224,76 @@ describe('Users API', () => {
             expect(response.pageSize).toBe(5)
         })
 
+        it('should support search functionality', async () => {
+            // Create a test user with searchable content
+            const timestamp = Date.now()
+            await app.db.insert(users).values({
+                email: `searchable-${timestamp}@example.com`,
+                name: 'Searchable Test User',
+                status: 'active'
+            })
+
+            const res = await app.inject({
+                method: 'GET',
+                url: `/api/users?search=Searchable`,
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+            expect(response.users.some((user: any) => user.name.includes('Searchable'))).toBe(true)
+        })
+
+        it('should support role filtering', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/users?role=admin',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+            // All returned users should have admin role
+            response.users.forEach((user: any) => {
+                expect(user.roles).toContain('admin')
+            })
+        })
+
+        it('should support status filtering', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/users?status=active',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+            // All returned users should be active
+            response.users.forEach((user: any) => {
+                expect(user.status).toBe('active')
+            })
+        })
+
+        it('should support combined search and filtering', async () => {
+            const res = await app.inject({
+                method: 'GET',
+                url: '/api/users?search=Admin&role=admin&status=active',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+            expect(Array.isArray(response.users)).toBe(true)
+        })
+
         it('should use default pagination when no parameters provided', async () => {
             const res = await app.inject({
                 method: 'GET',
@@ -985,6 +1055,545 @@ describe('Users API', () => {
             expect(response.statusCode).toBe(400)
             expect(response.error).toBe('Bad Request')
             expect(response.message).toBeDefined()
+        })
+    })
+
+    describe('PATCH /api/users/:id/status', () => {
+        let adminToken: string
+        let userToken: string
+        let testUserId: string
+        let adminUserId: string
+
+        beforeEach(async () => {
+            const timestamp = Date.now()
+            
+            // Ensure admin role exists first
+            let adminRole
+            try {
+                [adminRole] = await app.db.insert(roles).values({
+                    name: 'admin'
+                }).returning()
+            } catch (error) {
+                const existingRole = await app.db.select().from(roles)
+                    .where(eq(roles.name, 'admin')).limit(1)
+                adminRole = existingRole[0]
+            }
+
+            // Create admin user
+            const adminEmail = `admin-status-${timestamp}@example.com`
+            const [adminUser] = await app.db.insert(users).values({
+                email: adminEmail,
+                name: 'Admin Status Manager',
+                status: 'active'
+            }).returning()
+
+            adminUserId = adminUser.id
+
+            // Assign admin role
+            await app.db.insert(userRoles).values({
+                userId: adminUser.id,
+                roleId: adminRole.id
+            })
+
+            // Login as admin
+            const adminAzureData = {
+                email: adminEmail,
+                name: 'Admin Status Manager',
+                oid: 'admin-status-oid',
+                tid: 'admin-status-tid'
+            }
+            const adminAzureToken = Buffer.from(JSON.stringify(adminAzureData)).toString('base64')
+
+            const adminLoginRes = await app.inject({
+                method: 'POST',
+                url: '/api/auth/login',
+                payload: { azure_token: adminAzureToken }
+            })
+
+            adminToken = JSON.parse(adminLoginRes.payload).jwt
+
+            // Create test user
+            const [testUser] = await app.db.insert(users).values({
+                email: `test-status-${timestamp}@example.com`,
+                name: 'Test Status User',
+                status: 'active'
+            }).returning()
+
+            testUserId = testUser.id
+
+            // Create regular user
+            const userAzureData = {
+                email: `regular-status-${timestamp}@example.com`,
+                name: 'Regular Status User',
+                oid: 'regular-status-oid',
+                tid: 'regular-status-tid'
+            }
+            const userAzureToken = Buffer.from(JSON.stringify(userAzureData)).toString('base64')
+
+            const userLoginRes = await app.inject({
+                method: 'POST',
+                url: '/api/auth/login',
+                payload: { azure_token: userAzureToken }
+            })
+
+            userToken = JSON.parse(userLoginRes.payload).jwt
+        })
+
+        it('should update user status successfully', async () => {
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/users/${testUserId}/status`,
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: { status: 'inactive' }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.id).toBe(testUserId)
+            expect(response.status).toBe('inactive')
+        })
+
+        it('should prevent self-deactivation', async () => {
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/users/${adminUserId}/status`,
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: { status: 'inactive' }
+            })
+
+            expect(res.statusCode).toBe(400)
+            const response = JSON.parse(res.payload)
+            expect(response.message).toContain('Cannot deactivate yourself')
+        })
+
+        it('should return 404 for non-existent user', async () => {
+            const nonExistentId = '00000000-0000-0000-0000-000000000000'
+
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/users/${nonExistentId}/status`,
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: { status: 'inactive' }
+            })
+
+            expect(res.statusCode).toBe(404)
+        })
+
+        it('should return 403 for non-admin user', async () => {
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/users/${testUserId}/status`,
+                headers: {
+                    authorization: `Bearer ${userToken}`
+                },
+                payload: { status: 'inactive' }
+            })
+
+            expect(res.statusCode).toBe(403)
+        })
+
+        it('should return 400 for invalid status value', async () => {
+            const res = await app.inject({
+                method: 'PATCH',
+                url: `/api/users/${testUserId}/status`,
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: { status: 'invalid-status' }
+            })
+
+            expect(res.statusCode).toBe(400)
+        })
+    })
+
+    describe('POST /api/users/bulk-assign-role', () => {
+        let adminToken: string
+        let userToken: string
+        let testUserIds: string[]
+
+        beforeEach(async () => {
+            const timestamp = Date.now()
+            
+            // Ensure roles exist
+            let adminRole, editorRole
+            try {
+                [adminRole] = await app.db.insert(roles).values({
+                    name: 'admin'
+                }).returning()
+            } catch (error) {
+                const existingRole = await app.db.select().from(roles)
+                    .where(eq(roles.name, 'admin')).limit(1)
+                adminRole = existingRole[0]
+            }
+
+            try {
+                [editorRole] = await app.db.insert(roles).values({
+                    name: 'editor'
+                }).returning()
+            } catch (error) {
+                // Role might already exist
+            }
+
+            // Create admin user
+            const adminEmail = `admin-bulk-${timestamp}@example.com`
+            const [adminUser] = await app.db.insert(users).values({
+                email: adminEmail,
+                name: 'Admin Bulk Manager',
+                status: 'active'
+            }).returning()
+
+            // Assign admin role
+            await app.db.insert(userRoles).values({
+                userId: adminUser.id,
+                roleId: adminRole.id
+            })
+
+            // Login as admin
+            const adminAzureData = {
+                email: adminEmail,
+                name: 'Admin Bulk Manager',
+                oid: 'admin-bulk-oid',
+                tid: 'admin-bulk-tid'
+            }
+            const adminAzureToken = Buffer.from(JSON.stringify(adminAzureData)).toString('base64')
+
+            const adminLoginRes = await app.inject({
+                method: 'POST',
+                url: '/api/auth/login',
+                payload: { azure_token: adminAzureToken }
+            })
+
+            adminToken = JSON.parse(adminLoginRes.payload).jwt
+
+            // Create test users
+            const userPromises = []
+            for (let i = 0; i < 3; i++) {
+                userPromises.push(
+                    app.db.insert(users).values({
+                        email: `test-bulk-${timestamp}-${i}@example.com`,
+                        name: `Test Bulk User ${i}`,
+                        status: 'active'
+                    }).returning()
+                )
+            }
+
+            const userResults = await Promise.all(userPromises)
+            testUserIds = userResults.map(result => result[0].id)
+
+            // Create regular user for permission testing
+            const userAzureData = {
+                email: `regular-bulk-${timestamp}@example.com`,
+                name: 'Regular Bulk User',
+                oid: 'regular-bulk-oid',
+                tid: 'regular-bulk-tid'
+            }
+            const userAzureToken = Buffer.from(JSON.stringify(userAzureData)).toString('base64')
+
+            const userLoginRes = await app.inject({
+                method: 'POST',
+                url: '/api/auth/login',
+                payload: { azure_token: userAzureToken }
+            })
+
+            userToken = JSON.parse(userLoginRes.payload).jwt
+        })
+
+        it('should assign role to multiple users successfully', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-assign-role',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds: testUserIds.slice(0, 2),
+                    roleName: 'editor',
+                    reason: 'Bulk assignment test'
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.success).toBe(true)
+            expect(response.processedCount).toBe(2)
+            expect(response.skippedCount).toBe(0)
+            expect(response.errors).toHaveLength(0)
+        })
+
+        it('should handle non-existent users gracefully', async () => {
+            const nonExistentId = '00000000-0000-0000-0000-000000000000'
+            const userIds = [...testUserIds.slice(0, 1), nonExistentId]
+
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-assign-role',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds,
+                    roleName: 'editor'
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.processedCount).toBe(1)
+            expect(response.skippedCount).toBe(1)
+            expect(response.errors).toHaveLength(1)
+            expect(response.errors[0].userId).toBe(nonExistentId)
+        })
+
+        it('should handle non-existent role', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-assign-role',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds: testUserIds.slice(0, 2),
+                    roleName: 'nonexistent-role'
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.success).toBe(false)
+            expect(response.skippedCount).toBe(2)
+            expect(response.errors.every((e: any) => e.error === 'Role not found')).toBe(true)
+        })
+
+        it('should return 403 for non-admin user', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-assign-role',
+                headers: {
+                    authorization: `Bearer ${userToken}`
+                },
+                payload: {
+                    userIds: testUserIds.slice(0, 1),
+                    roleName: 'editor'
+                }
+            })
+
+            expect(res.statusCode).toBe(403)
+        })
+
+        it('should validate request payload', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-assign-role',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds: [], // Empty array should fail validation
+                    roleName: 'editor'
+                }
+            })
+
+            expect(res.statusCode).toBe(400)
+        })
+    })
+
+    describe('POST /api/users/bulk-deactivate', () => {
+        let adminToken: string
+        let userToken: string
+        let testUserIds: string[]
+        let adminUserId: string
+
+        beforeEach(async () => {
+            const timestamp = Date.now()
+            
+            // Ensure admin role exists
+            let adminRole
+            try {
+                [adminRole] = await app.db.insert(roles).values({
+                    name: 'admin'
+                }).returning()
+            } catch (error) {
+                const existingRole = await app.db.select().from(roles)
+                    .where(eq(roles.name, 'admin')).limit(1)
+                adminRole = existingRole[0]
+            }
+
+            // Create admin user
+            const adminEmail = `admin-deactivate-${timestamp}@example.com`
+            const [adminUser] = await app.db.insert(users).values({
+                email: adminEmail,
+                name: 'Admin Deactivate Manager',
+                status: 'active'
+            }).returning()
+
+            adminUserId = adminUser.id
+
+            // Assign admin role
+            await app.db.insert(userRoles).values({
+                userId: adminUser.id,
+                roleId: adminRole.id
+            })
+
+            // Login as admin
+            const adminAzureData = {
+                email: adminEmail,
+                name: 'Admin Deactivate Manager',
+                oid: 'admin-deactivate-oid',
+                tid: 'admin-deactivate-tid'
+            }
+            const adminAzureToken = Buffer.from(JSON.stringify(adminAzureData)).toString('base64')
+
+            const adminLoginRes = await app.inject({
+                method: 'POST',
+                url: '/api/auth/login',
+                payload: { azure_token: adminAzureToken }
+            })
+
+            adminToken = JSON.parse(adminLoginRes.payload).jwt
+
+            // Create test users
+            const userPromises = []
+            for (let i = 0; i < 3; i++) {
+                userPromises.push(
+                    app.db.insert(users).values({
+                        email: `test-deactivate-${timestamp}-${i}@example.com`,
+                        name: `Test Deactivate User ${i}`,
+                        status: 'active'
+                    }).returning()
+                )
+            }
+
+            const userResults = await Promise.all(userPromises)
+            testUserIds = userResults.map(result => result[0].id)
+
+            // Create regular user for permission testing
+            const userAzureData = {
+                email: `regular-deactivate-${timestamp}@example.com`,
+                name: 'Regular Deactivate User',
+                oid: 'regular-deactivate-oid',
+                tid: 'regular-deactivate-tid'
+            }
+            const userAzureToken = Buffer.from(JSON.stringify(userAzureData)).toString('base64')
+
+            const userLoginRes = await app.inject({
+                method: 'POST',
+                url: '/api/auth/login',
+                payload: { azure_token: userAzureToken }
+            })
+
+            userToken = JSON.parse(userLoginRes.payload).jwt
+        })
+
+        it('should deactivate multiple users successfully', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-deactivate',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds: testUserIds.slice(0, 2),
+                    reason: 'Bulk deactivation test'
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.success).toBe(true)
+            expect(response.processedCount).toBe(2)
+            expect(response.skippedCount).toBe(0)
+            expect(response.errors).toHaveLength(0)
+        })
+
+        it('should prevent self-deactivation in bulk operation', async () => {
+            const userIds = [...testUserIds.slice(0, 1), adminUserId]
+
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-deactivate',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds,
+                    reason: 'Test self-deactivation prevention'
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.processedCount).toBe(1) // Only the test user
+            expect(response.skippedCount).toBe(1) // Admin user skipped
+            expect(response.errors).toHaveLength(1)
+            expect(response.errors[0].error).toContain('Cannot deactivate yourself')
+        })
+
+        it('should handle non-existent users gracefully', async () => {
+            const nonExistentId = '00000000-0000-0000-0000-000000000000'
+            const userIds = [...testUserIds.slice(0, 1), nonExistentId]
+
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-deactivate',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds,
+                    reason: 'Test non-existent user handling'
+                }
+            })
+
+            expect(res.statusCode).toBe(200)
+            const response = JSON.parse(res.payload)
+
+            expect(response.processedCount).toBe(1)
+            expect(response.skippedCount).toBe(1)
+            expect(response.errors).toHaveLength(1)
+            expect(response.errors[0].userId).toBe(nonExistentId)
+        })
+
+        it('should return 403 for non-admin user', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-deactivate',
+                headers: {
+                    authorization: `Bearer ${userToken}`
+                },
+                payload: {
+                    userIds: testUserIds.slice(0, 1),
+                    reason: 'Unauthorized test'
+                }
+            })
+
+            expect(res.statusCode).toBe(403)
+        })
+
+        it('should validate request payload', async () => {
+            const res = await app.inject({
+                method: 'POST',
+                url: '/api/users/bulk-deactivate',
+                headers: {
+                    authorization: `Bearer ${adminToken}`
+                },
+                payload: {
+                    userIds: [] // Empty array should fail validation
+                }
+            })
+
+            expect(res.statusCode).toBe(400)
         })
     })
 })

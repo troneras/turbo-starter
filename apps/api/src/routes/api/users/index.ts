@@ -9,6 +9,13 @@ import {
     UpdateUserRequestSchema,
     UpdateUserResponseSchema,
     DeleteUserParamsSchema,
+    UpdateUserStatusParamsSchema,
+    UpdateUserStatusRequestSchema,
+    UpdateUserStatusResponseSchema,
+    BulkAssignRoleRequestSchema,
+    BulkAssignRoleResponseSchema,
+    BulkDeactivateRequestSchema,
+    BulkDeactivateResponseSchema,
     UnauthorizedErrorSchema,
     ForbiddenErrorSchema,
     NotFoundErrorSchema,
@@ -20,7 +27,11 @@ import type {
     CreateUserRequest,
     UpdateUserParams,
     UpdateUserRequest,
-    DeleteUserParams
+    DeleteUserParams,
+    UpdateUserStatusParams,
+    UpdateUserStatusRequest,
+    BulkAssignRoleRequest,
+    BulkDeactivateRequest
 } from "@cms/contracts/types/users";
 
 export default async function (fastify: FastifyInstance) {
@@ -72,9 +83,9 @@ export default async function (fastify: FastifyInstance) {
         },
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
-        const { page = 1, pageSize = 20 } = request.query as ListUsersQuery
+        const { page = 1, pageSize = 20, search, role, status } = request.query as ListUsersQuery
 
-        const result = await fastify.users.listUsers(page, pageSize)
+        const result = await fastify.users.listUsers(page, pageSize, { search, role, status })
 
         return result
     })
@@ -182,6 +193,98 @@ export default async function (fastify: FastifyInstance) {
             if (error.message.includes('not found')) {
                 return reply.notFound('User not found')
             }
+            throw fastify.httpErrors.badRequest(error.message)
+        }
+    })
+
+    // Update user status (admin only)
+    fastify.patch('/:id/status', {
+        schema: {
+            tags: ['users'],
+            summary: 'Update user status',
+            security: [{ bearerAuth: [] }],
+            params: UpdateUserStatusParamsSchema,
+            body: UpdateUserStatusRequestSchema,
+            response: {
+                200: UpdateUserStatusResponseSchema,
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema,
+                404: NotFoundErrorSchema
+            }
+        },
+        onRequest: [fastify.authenticate, fastify.requireRole('admin')]
+    }, async (request, reply) => {
+        const { id } = request.params as UpdateUserStatusParams
+        const { status } = request.body as UpdateUserStatusRequest
+        const currentUser = (request as any).user
+
+        // Prevent self-deactivation
+        if (id === currentUser.sub && status === 'inactive') {
+            return reply.badRequest('Cannot deactivate yourself')
+        }
+
+        try {
+            const result = await fastify.users.updateUserStatus(id, status, currentUser.sub)
+            return result
+        } catch (error: any) {
+            if (error.message.includes('not found')) {
+                return reply.notFound('User not found')
+            }
+            throw fastify.httpErrors.badRequest(error.message)
+        }
+    })
+
+    // Bulk assign role (admin only)
+    fastify.post('/bulk-assign-role', {
+        schema: {
+            tags: ['users'],
+            summary: 'Bulk assign role to users',
+            security: [{ bearerAuth: [] }],
+            body: BulkAssignRoleRequestSchema,
+            response: {
+                200: BulkAssignRoleResponseSchema,
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema
+            }
+        },
+        onRequest: [fastify.authenticate, fastify.requireRole('admin')]
+    }, async (request, reply) => {
+        const { userIds, roleName, reason } = request.body as BulkAssignRoleRequest
+        const currentUser = (request as any).user
+
+        try {
+            const result = await fastify.users.bulkAssignRole(userIds, roleName, currentUser.sub, reason)
+            return result
+        } catch (error: any) {
+            throw fastify.httpErrors.badRequest(error.message)
+        }
+    })
+
+    // Bulk deactivate users (admin only)
+    fastify.post('/bulk-deactivate', {
+        schema: {
+            tags: ['users'],
+            summary: 'Bulk deactivate users',
+            security: [{ bearerAuth: [] }],
+            body: BulkDeactivateRequestSchema,
+            response: {
+                200: BulkDeactivateResponseSchema,
+                400: BadRequestErrorSchema,
+                401: UnauthorizedErrorSchema,
+                403: ForbiddenErrorSchema
+            }
+        },
+        onRequest: [fastify.authenticate, fastify.requireRole('admin')]
+    }, async (request, reply) => {
+        const { userIds, reason } = request.body as BulkDeactivateRequest
+        const currentUser = (request as any).user
+
+        try {
+            const result = await fastify.users.bulkDeactivateUsers(userIds, currentUser.sub, reason)
+            return result
+        } catch (error: any) {
             throw fastify.httpErrors.badRequest(error.message)
         }
     })

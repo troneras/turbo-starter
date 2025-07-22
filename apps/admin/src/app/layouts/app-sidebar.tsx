@@ -1,4 +1,3 @@
-import { Calendar, Home, Inbox, Link, Search } from "lucide-react"
 
 import {
     LayoutDashboard,
@@ -18,7 +17,6 @@ import {
     Sidebar,
     SidebarContent,
     SidebarGroup,
-    SidebarGroupAction,
     SidebarGroupContent,
     SidebarGroupLabel,
     SidebarMenu,
@@ -28,34 +26,6 @@ import {
     SidebarSeparator,
 } from "@/components/ui/sidebar"
 
-// Menu items.
-const items = [
-    {
-        title: "Home",
-        url: "#",
-        icon: Home,
-    },
-    {
-        title: "Inbox",
-        url: "#",
-        icon: Inbox,
-    },
-    {
-        title: "Calendar",
-        url: "#",
-        icon: Calendar,
-    },
-    {
-        title: "Search",
-        url: "#",
-        icon: Search,
-    },
-    {
-        title: "Settings",
-        url: "#",
-        icon: Settings,
-    },
-]
 
 const navItems = [
     {
@@ -99,12 +69,10 @@ export function AppSidebar() {
                                     {section.items.map((item) => (
                                         <SidebarMenuItem key={item.name}>
                                             <SidebarMenuButton asChild tooltip={item.name}>
-                                                {/* <Link to={item.href}> */}
-                                                <div>
+                                                <a href={item.href}>
                                                     <item.icon />
                                                     <span>{item.name}</span>
-                                                </div>
-                                                {/* </Link> */}
+                                                </a>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
 
