@@ -24,10 +24,11 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
 ### Step-by-Step Flow
 
 1. **User Login**: Admin UI initiates MSAL popup login with Azure AD
-2. **Token Exchange**: Azure AD token exchanged for internal JWT at `/api/auth/login`
-3. **API Access**: JWT attached to API requests via Axios interceptor
-4. **Authorization**: API validates JWT and checks RBAC permissions
-5. **User Creation**: New users auto-created on first login with default 'user' role
+2. **Token Exchange**: Frontend automatically exchanges Azure AD token for internal JWT at `/auth/login`
+3. **JWT Storage**: JWT stored in localStorage and attached to subsequent API requests
+4. **API Authentication**: Backend validates JWT and checks RBAC permissions
+5. **User Creation**: New users auto-created on first login with admin bootstrap logic (first 10 users get admin role)
+6. **Audit Logging**: All user management actions logged for compliance
 
 ## File Locations & Key Components
 
@@ -46,11 +47,16 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
 - `POST /api/auth/login` - Token exchange endpoint
 - Accepts either `azure_token` or `service_token` (not both)
 - Returns JWT + user info + roles + permissions
+- Triggers user creation/update and admin bootstrap logic
 
 **Users Routes**: `apps/api/src/routes/api/users/index.ts`
 
 - `GET /api/users/me` - Current user info endpoint
-- Admin-only user management endpoints
+- `GET /api/users` - Enhanced user search with filters (search, role, status)
+- `POST /api/users/bulk-assign-role` - Bulk role assignment
+- `POST /api/users/bulk-deactivate` - Bulk user deactivation
+- `PATCH /api/users/:id/status` - Toggle user active/inactive status
+- All admin-only user management endpoints with comprehensive audit logging
 
 ### Frontend Authentication Layer
 
@@ -61,15 +67,18 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
 
 **Auth Hook**: `apps/admin/src/app/hooks/use-auth.ts`
 
-- Central authentication state management
+- Central authentication state management with automatic token exchange
+- Automatically exchanges MSAL tokens for backend JWTs on login
 - Methods: `login()`, `logout()`, `hasRole(role)`, `hasPermission(permission)`
-- State: `isAuthenticated`, `user`
+- State: `isAuthenticated`, `user`, `backendUser`, `isLoading`
+- JWT storage in localStorage for persistence
 
 **API Client**: `apps/admin/src/lib/api-client.ts`
 
-- Axios interceptor for automatic token attachment
-- Silent token refresh handling
+- Axios interceptor for JWT token attachment (from localStorage)
+- Skips auth headers for login endpoint
 - 401 error handling and redirect
+- No longer uses MSAL token acquisition
 
 **Route Protection**: `apps/admin/src/app/layouts/auth-guard.tsx`
 
@@ -85,7 +94,7 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
 
 **Core Tables** (in `packages/db/schema/index.ts`):
 
-1. **users**: User profiles with Azure AD integration
+1. **users**: User profiles with Azure AD integration and status tracking
 
    ```sql
    - id (uuid, primary key)
@@ -94,23 +103,28 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
    - azure_ad_oid (varchar, nullable) -- Azure Object ID
    - azure_ad_tid (varchar, nullable) -- Azure Tenant ID
    - last_login_at (timestamp, nullable)
+   - status (varchar, default 'active') -- 'active' or 'inactive'
+   - created_by (uuid, nullable, references users.id) -- Audit tracking
+   - created_at (timestamp, default now())
+   - updated_at (timestamp, default now())
    ```
 
 2. **roles**: System roles
 
    ```sql
    - id (serial, primary key)
-   - name (text, unique) -- 'admin', 'editor', 'user', 'service'
+   - name (text, unique) -- 'admin', 'editor', 'translator', 'viewer', 'user', 'service'
+   - description (text) -- Role description
    ```
 
 3. **permissions**: Granular permissions
 
    ```sql
    - id (serial, primary key)
-   - name (varchar, unique) -- 'users:read', 'content:write'
+   - name (varchar, unique) -- 'users:read', 'users:manage', 'translations:publish'
    - description (text)
-   - resource (varchar) -- 'users', 'content', 'brands'
-   - action (varchar) -- 'read', 'write', 'delete'
+   - resource (varchar) -- 'users', 'translations', 'brands', 'content', 'roles'
+   - action (varchar) -- 'read', 'create', 'update', 'delete', 'manage', 'assign'
    ```
 
 4. **user_roles**: Many-to-many user-role relationships
@@ -139,6 +153,19 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
    - status (varchar) -- 'active', 'revoked'
    ```
 
+7. **user_audit_logs**: Comprehensive audit logging for user management
+   ```sql
+   - id (serial, primary key)
+   - target_user_id (uuid, references users.id) -- User being modified
+   - performed_by (uuid, references users.id) -- User performing action
+   - action (varchar) -- 'role_assigned', 'role_removed', 'status_changed', etc.
+   - old_value (jsonb) -- Previous state
+   - new_value (jsonb) -- New state
+   - reason (text) -- Optional reason for change
+   - is_automatic (boolean, default false) -- System vs manual actions
+   - created_at (timestamp, default now())
+   ```
+
 ### Shared Contracts
 
 **Authentication Schemas** (`packages/contracts/schemas/auth.ts`):
@@ -163,16 +190,35 @@ The CMS platform uses a **dual-authentication architecture** combining Azure AD 
 
 ### API Authentication Functions
 
-**Azure AD Token Validation** (`apps/api/src/plugins/external/auth.ts:36`):
+**Azure AD Token Validation** with Admin Bootstrap (`apps/api/src/plugins/external/auth.ts:71`):
 
 ```typescript
 async validateAzureToken(token: string): Promise<AuthUser> {
   // 1. Decode base64 token (mock for testing)
   // 2. Find or create user in database
-  // 3. Update last login timestamp
-  // 4. Assign default 'user' role to new users
-  // 5. Query user roles and permissions
-  // 6. Return AuthUser object
+  // 3. For new users: determine role via admin bootstrap logic (first 10 get admin)
+  // 4. Update last login timestamp and Azure AD fields
+  // 5. Log audit event for role assignments
+  // 6. Query user roles and permissions
+  // 7. Return AuthUser object with full RBAC data
+}
+```
+
+**Admin Bootstrap Logic** (`apps/api/src/plugins/external/auth.ts:35`):
+
+```typescript
+async determineNewUserRole(): Promise<string> {
+  return await fastify.db.transaction(async (tx) => {
+    // Count current admin users with SELECT FOR UPDATE (race condition protection)
+    const adminCount = await tx.select({ count: sql`count(*)` })
+      .from(users)
+      .innerJoin(userRoles, eq(users.id, userRoles.userId))
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(roles.name, 'admin'))
+    
+    // First 10 users get admin role, rest get user role
+    return adminCount[0].count < 10 ? 'admin' : 'user'
+  })
 }
 ```
 
@@ -201,22 +247,63 @@ fastify.decorate("requireRole", function (requiredRole: string) {
 
 ### Frontend Authentication Functions
 
-**MSAL Login** (`apps/admin/src/app/hooks/use-auth.ts:17`):
+**Enhanced Login with Token Exchange** (`apps/admin/src/app/hooks/use-auth.ts:98`):
 
 ```typescript
 const login = async () => {
-  await instance.loginPopup({
-    scopes: [import.meta.env.VITE_MSAL_SCOPES],
-  });
+  try {
+    await instance.loginPopup({
+      scopes: [import.meta.env.VITE_MSAL_SCOPES],
+    });
+    // Token exchange happens automatically in useEffect
+  } catch (error) {
+    console.error('Login failed:', error);
+  }
 };
 ```
 
-**Role Checking** (`apps/admin/src/app/hooks/use-auth.ts:31`):
+**Automatic Token Exchange** (`apps/admin/src/app/hooks/use-auth.ts:36`):
+
+```typescript
+useEffect(() => {
+  const exchangeToken = async () => {
+    if (!isAuthenticated || !account || backendUser) return;
+    
+    // Create Azure token for backend (base64 encoded user info)
+    const azureTokenData = {
+      email: account.username,
+      name: account.name || account.username,
+      oid: account.localAccountId,
+      tid: account.tenantId,
+    };
+    
+    const azureToken = btoa(JSON.stringify(azureTokenData));
+    
+    // Exchange with backend
+    const response = await apiClient.post('/auth/login', {
+      azure_token: azureToken
+    });
+    
+    const { jwt, user, roles, permissions } = response.data;
+    localStorage.setItem('auth_jwt', jwt);
+    setBackendUser({ ...user, roles, permissions });
+  };
+  
+  exchangeToken();
+}, [isAuthenticated, account, instance, backendUser]);
+```
+
+**Backend-Based Role Checking** (`apps/admin/src/app/hooks/use-auth.ts:122`):
 
 ```typescript
 const hasRole = (role: string): boolean => {
-  const roles = (account.idTokenClaims as any)?.roles || [];
-  return roles.includes(role);
+  if (!backendUser?.roles) return false;
+  return backendUser.roles.includes(role);
+};
+
+const hasPermission = (permission: string): boolean => {
+  if (!backendUser?.permissions) return false;
+  return backendUser.permissions.includes(permission);
 };
 ```
 
@@ -251,9 +338,7 @@ const azureTokenData = {
   oid: "azure-object-id-123",
   tid: "azure-tenant-id-456",
 };
-const azureToken = Buffer.from(JSON.stringify(azureTokenData)).toString(
-  "base64"
-);
+const azureToken = btoa(JSON.stringify(azureTokenData)); // Browser-compatible
 ```
 
 **Authentication Flow Test**:
@@ -289,6 +374,30 @@ vi.mock("@azure/msal-react", () => ({
   useAccount: () => null,
 }));
 ```
+
+### Test Data (`packages/db/seed.ts`)
+
+**Comprehensive Role System**:
+- **6 roles**: admin, editor, translator, viewer, user, service
+- **16 permissions**: Granular RBAC with user management, translations, content, brands
+- **32 role-permission assignments**: Hierarchical permission structure
+
+**Test Users** (8 diverse users for UI testing):
+- **Alice Johnson** - Admin + Editor (active, 2 hours ago)
+- **Bob Smith** - Editor + Translator (active, 1 day ago) 
+- **Carol Davis** - Translator (active, 3 days ago)
+- **David Wilson** - Viewer (INACTIVE, 1 week ago)
+- **Eve Brown** - Editor (active, 2 weeks ago)
+- **Frank Miller** - User, no Azure AD (active, never logged in)
+- **Grace Lee** - Editor + Viewer (active, 6 hours ago)
+- **Henry Taylor** - Translator (active, 30 minutes ago)
+
+**Key Features**:
+- Multiple role assignments per user
+- Mix of active/inactive users
+- Realistic login timestamps
+- Azure AD and local user variations
+- Admin bootstrap demonstration ready
 
 ## Usage Examples
 

@@ -36,3 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# E2E Testing
+apps/admin/e2e/screenshots/
+*.png

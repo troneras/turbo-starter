@@ -17,7 +17,7 @@ export async function seed() {
     // Create initial roles and permissions
     const seedRolesAndPermissions = async () => {
         console.log('Creating roles...')
-        
+
         // Create comprehensive roles matching the UI mockups
         const roleData = [
             { name: 'admin', description: 'Full system access' },
@@ -40,21 +40,21 @@ export async function seed() {
             { name: 'users:update', description: 'Update users', resource: 'users', action: 'update' },
             { name: 'users:delete', description: 'Delete users', resource: 'users', action: 'delete' },
             { name: 'users:manage', description: 'Manage user roles and permissions', resource: 'users', action: 'manage' },
-            
+
             // Role management permissions  
             { name: 'roles:read', description: 'View roles', resource: 'roles', action: 'read' },
             { name: 'roles:assign', description: 'Assign roles to users', resource: 'roles', action: 'assign' },
-            
+
             // Translation permissions
             { name: 'translations:read', description: 'Read translations', resource: 'translations', action: 'read' },
             { name: 'translations:write', description: 'Write translations', resource: 'translations', action: 'write' },
             { name: 'translations:publish', description: 'Publish translations', resource: 'translations', action: 'publish' },
             { name: 'translations:review', description: 'Review translations', resource: 'translations', action: 'review' },
-            
+
             // Brand management permissions
             { name: 'brands:read', description: 'View brands', resource: 'brands', action: 'read' },
             { name: 'brands:write', description: 'Manage brands', resource: 'brands', action: 'write' },
-            
+
             // Content permissions
             { name: 'content:read', description: 'View content', resource: 'content', action: 'read' },
             { name: 'content:write', description: 'Edit content', resource: 'content', action: 'write' },
@@ -66,35 +66,35 @@ export async function seed() {
 
         // Assign permissions to roles
         console.log('Assigning permissions to roles...')
-        
+
         // Admin gets all permissions
         const adminRole = createdRoles.find(r => r.name === 'admin')!
         const adminPermissions = createdPermissions.map(p => ({
             roleId: adminRole.id,
             permissionId: p.id
         }))
-        
+
         // Editor permissions
         const editorRole = createdRoles.find(r => r.name === 'editor')!
         const editorPermissionNames = ['users:read', 'roles:read', 'translations:read', 'translations:write', 'translations:publish', 'translations:review', 'brands:read', 'content:read', 'content:write']
         const editorPermissions = createdPermissions
             .filter(p => editorPermissionNames.includes(p.name))
             .map(p => ({ roleId: editorRole.id, permissionId: p.id }))
-        
+
         // Translator permissions
         const translatorRole = createdRoles.find(r => r.name === 'translator')!
         const translatorPermissionNames = ['translations:read', 'translations:write', 'content:read']
         const translatorPermissions = createdPermissions
             .filter(p => translatorPermissionNames.includes(p.name))
             .map(p => ({ roleId: translatorRole.id, permissionId: p.id }))
-        
+
         // Viewer permissions
         const viewerRole = createdRoles.find(r => r.name === 'viewer')!
         const viewerPermissionNames = ['translations:read', 'brands:read', 'content:read']
         const viewerPermissions = createdPermissions
             .filter(p => viewerPermissionNames.includes(p.name))
             .map(p => ({ roleId: viewerRole.id, permissionId: p.id }))
-        
+
         // User permissions (basic read access)
         const userRole = createdRoles.find(r => r.name === 'user')!
         const userPermissionNames = ['content:read']
@@ -105,12 +105,12 @@ export async function seed() {
         // Insert all role-permission assignments
         const allRolePermissions = [
             ...adminPermissions,
-            ...editorPermissions, 
+            ...editorPermissions,
             ...translatorPermissions,
             ...viewerPermissions,
             ...userPermissions
         ]
-        
+
         await db.insert(rolePermissions).values(allRolePermissions)
         console.log(`Created ${allRolePermissions.length} role-permission assignments`)
 
@@ -131,7 +131,7 @@ export async function seed() {
             last_login_at: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
         },
         {
-            email: 'bob@company.com', 
+            email: 'bob@company.com',
             name: 'Bob Smith',
             status: 'active' as const,
             azure_ad_oid: 'bob-azure-oid',
@@ -142,7 +142,7 @@ export async function seed() {
             email: 'carol@company.com',
             name: 'Carol Davis',
             status: 'active' as const,
-            azure_ad_oid: 'carol-azure-oid', 
+            azure_ad_oid: 'carol-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
         },
@@ -159,7 +159,7 @@ export async function seed() {
             name: 'Eve Brown',
             status: 'active' as const,
             azure_ad_oid: 'eve-azure-oid',
-            azure_ad_tid: 'tenant-123', 
+            azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 2 * 7 * 24 * 60 * 60 * 1000) // 2 weeks ago
         },
         {
@@ -195,34 +195,34 @@ export async function seed() {
     console.log('Assigning roles to test users...')
     const userRoleAssignments = [
         // Alice - Admin + Editor (multiple roles)
-        { userId: sampleUsers[0].id, roleId: createdRoles.find(r => r.name === 'admin')?.id },
-        { userId: sampleUsers[0].id, roleId: createdRoles.find(r => r.name === 'editor')?.id },
-        
+        { userId: sampleUsers[0]?.id, roleId: createdRoles.find(r => r.name === 'admin')!.id },
+        { userId: sampleUsers[0]?.id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
+
         // Bob - Editor + Translator
-        { userId: sampleUsers[1].id, roleId: createdRoles.find(r => r.name === 'editor')?.id },
-        { userId: sampleUsers[1].id, roleId: createdRoles.find(r => r.name === 'translator')?.id },
-        
+        { userId: sampleUsers[1]?.id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
+        { userId: sampleUsers[1]?.id, roleId: createdRoles.find(r => r.name === 'translator')!.id },
+
         // Carol - Translator only
-        { userId: sampleUsers[2].id, roleId: createdRoles.find(r => r.name === 'translator')!.id },
-        
+        { userId: sampleUsers[2]?.id, roleId: createdRoles.find(r => r.name === 'translator')!.id },
+
         // David - Viewer only (inactive user)
-        { userId: sampleUsers[3].id, roleId: createdRoles.find(r => r.name === 'viewer')!.id },
-        
+        { userId: sampleUsers[3]?.id, roleId: createdRoles.find(r => r.name === 'viewer')!.id },
+
         // Eve - Editor only
-        { userId: sampleUsers[4].id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
-        
+        { userId: sampleUsers[4]?.id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
+
         // Frank - User only (basic role)  
-        { userId: sampleUsers[5].id, roleId: createdRoles.find(r => r.name === 'user')!.id },
-        
+        { userId: sampleUsers[5]?.id, roleId: createdRoles.find(r => r.name === 'user')!.id },
+
         // Grace - Editor + Viewer
-        { userId: sampleUsers[6].id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
-        { userId: sampleUsers[6].id, roleId: createdRoles.find(r => r.name === 'viewer')!.id },
-        
+        { userId: sampleUsers[6]?.id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
+        { userId: sampleUsers[6]?.id, roleId: createdRoles.find(r => r.name === 'viewer')!.id },
+
         // Henry - Translator only
-        { userId: sampleUsers[7].id, roleId: createdRoles.find(r => r.name === 'translator')!.id }
+        { userId: sampleUsers[7]?.id, roleId: createdRoles.find(r => r.name === 'translator')!.id }
     ]
 
-    await db.insert(userRoles).values(userRoleAssignments)
+    await db.insert(userRoles).values(userRoleAssignments.filter((assignment): assignment is { userId: string; roleId: number } => assignment.userId !== undefined))
     console.log(`Created ${userRoleAssignments.length} user-role assignments`)
 
     console.log('\n✅ Database seeded successfully!')

@@ -36,6 +36,21 @@ export default async function (fastify: FastifyInstance) {
             let authResult
 
             if (azure_token) {
+                // Check if this is a test mode token first
+                if (azure_token.startsWith('mock-')) {
+                    const testAuth = await fastify.auth.validateTestToken(azure_token)
+                    if (testAuth) {
+                        // For test mode, return the mock token directly
+                        // No need to generate a new JWT
+                        return {
+                            jwt: azure_token,
+                            user: testAuth.user,
+                            roles: testAuth.roles,
+                            permissions: testAuth.permissions
+                        }
+                    }
+                }
+                
                 // Use Azure AD auth service
                 authResult = await fastify.auth.validateAzureToken(azure_token)
             } else {

@@ -220,6 +220,16 @@ export class UsersRepository {
 - `NODE_ENV` - Environment (default: 'development')
 - `REDIS_URL` - Redis connection (default: redis://localhost:6379)
 - `CORS_ORIGIN` - CORS origin (default: '*')
+- `TEST_MODE` - Enable test authentication (default: false)
+
+### Test Mode
+
+When `TEST_MODE=true` is set, the API accepts mock JWT tokens for testing:
+
+- Tokens starting with `mock-` bypass real authentication
+- Predefined tokens: `mock-admin-jwt-token`, `mock-editor-jwt-token`, `mock-user-jwt-token`
+- Custom tokens: `mock-{userId}-jwt-token` create basic users
+- **WARNING**: Never enable in production!
 
 ## Security Features
 

@@ -9,8 +9,8 @@ import { users, serviceTokens, roles, userRoles, permissions, rolePermissions, u
 declare module 'fastify' {
     interface FastifyInstance {
         auth: ReturnType<typeof authPlugin>,
-        authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>,
-        requireRole: (requiredRole: string) => (request: FastifyRequest, reply: FastifyReply) => Promise<void>
+        authenticate: (request: FastifyRequest) => Promise<void>,
+        requireRole: (requiredRole: string) => (request: FastifyRequest) => Promise<void>
     }
 }
 
@@ -28,9 +28,88 @@ interface AuthUser {
 }
 
 export function authPlugin(fastify: FastifyInstance) {
-
+    // Check if we're in test mode
+    const isTestMode = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test'
 
     return {
+        // Validate test mode JWT token
+        async validateTestToken(token: string): Promise<AuthUser | null> {
+            if (!isTestMode) return null
+            
+            // Test tokens start with 'mock-'
+            if (!token.startsWith('mock-')) return null
+            
+            try {
+                // For test mode, decode the user data from localStorage
+                // The frontend stores user data when using test auth
+                // Here we create a synthetic user based on the token pattern
+                
+                let testUser: AuthUser
+                
+                if (token === 'mock-admin-jwt-token') {
+                    testUser = {
+                        user: {
+                            id: 'admin-test-123',
+                            email: 'admin@example.com',
+                            name: 'Admin User'
+                        },
+                        roles: ['admin', 'user'],
+                        permissions: [
+                            'users:read', 'users:create', 'users:update', 'users:delete',
+                            'brands:read', 'brands:create', 'brands:update', 'brands:delete',
+                            'translations:read', 'translations:create', 'translations:update', 
+                            'translations:delete', 'translations:publish'
+                        ]
+                    }
+                } else if (token === 'mock-editor-jwt-token') {
+                    testUser = {
+                        user: {
+                            id: 'editor-test-123',
+                            email: 'editor@example.com',
+                            name: 'Editor User'
+                        },
+                        roles: ['editor', 'user'],
+                        permissions: [
+                            'users:read',
+                            'brands:read',
+                            'translations:read', 'translations:create', 'translations:update'
+                        ]
+                    }
+                } else if (token === 'mock-user-jwt-token') {
+                    testUser = {
+                        user: {
+                            id: 'user-test-123',
+                            email: 'user@example.com',
+                            name: 'Basic User'
+                        },
+                        roles: ['user'],
+                        permissions: ['users:read', 'brands:read', 'translations:read']
+                    }
+                } else if (token.startsWith('mock-') && token.endsWith('-jwt-token')) {
+                    // Custom test user - extract ID from token
+                    const userId = token.replace('mock-', '').replace('-jwt-token', '')
+                    testUser = {
+                        user: {
+                            id: userId,
+                            email: `${userId}@test.local`,
+                            name: `Test User ${userId}`
+                        },
+                        roles: ['user'],
+                        permissions: ['users:read']
+                    }
+                } else {
+                    return null
+                }
+                
+                fastify.log.warn({ token, user: testUser.user.email }, 'Test mode authentication used')
+                return testUser
+            } catch (error) {
+                fastify.log.error({ error, token }, 'Failed to validate test token')
+                return null
+            }
+        },
+
+        
         // Determine role for new user (admin bootstrap logic)
         async determineNewUserRole(): Promise<string> {
             return await fastify.db.transaction(async (tx) => {
@@ -253,18 +332,46 @@ export default fp(async function (fastify: FastifyInstance) {
         }
     })
     // Authentication decorator
-    fastify.decorate('authenticate', async function (request: any, reply: any) {
+    fastify.decorate('authenticate', async function (request: any) {
         try {
-            const token = await request.jwtVerify()
-            request.user = token
-        } catch (err) {
+            // Extract token from Authorization header
+            const authHeader = request.headers.authorization
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                throw fastify.httpErrors.unauthorized('Missing or invalid authorization header')
+            }
+            
+            const token = authHeader.substring(7) // Remove 'Bearer ' prefix
+            
+            // Check if this is a test token first
+            if (token.startsWith('mock-')) {
+                const testAuth = await fastify.auth.validateTestToken(token)
+                if (testAuth) {
+                    // Set request.user with test auth data
+                    request.user = {
+                        sub: testAuth.user.id,
+                        email: testAuth.user.email,
+                        name: testAuth.user.name,
+                        roles: testAuth.roles,
+                        permissions: testAuth.permissions
+                    }
+                    return
+                }
+            }
+            
+            // Normal JWT verification
+            const decoded = await request.jwtVerify()
+            request.user = decoded
+        } catch (err: any) {
+            if (err.message && err.message.includes('authorization header')) {
+                throw err
+            }
             throw fastify.httpErrors.unauthorized('Unauthorized')
         }
     })
 
     // Role-based access control decorator
     fastify.decorate('requireRole', function (requiredRole: string) {
-        return async function (request: any, reply: any) {
+        return async function (request: any) {
             const user = request.user
 
             if (!user || !user.roles || !user.roles.includes(requiredRole)) {
