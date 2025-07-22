@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
 // Legacy MSAL instance management - kept for compatibility
-export const setMsalInstance = (instance: any, accountList: any[]) => {
+export const setMsalInstance = (_instance: any, _accountList: any[]) => {
   // No longer needed since we use JWT tokens directly
 };
 
