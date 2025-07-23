@@ -48,7 +48,7 @@ export function TestAuthProvider({ children, initialUser }: TestAuthProviderProp
         window.history.replaceState({}, '', newUrl.toString());
         return;
       } else {
-        console.warn(`Unknown test profile: ${testProfile}. Available profiles: admin, editor, user`);
+        console.warn(`Unknown test profile: ${testProfile}. Available profiles: admin, editor, translator`);
       }
     }
     

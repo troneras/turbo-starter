@@ -1,5 +1,5 @@
 import { db } from './config'
-import { users, roles, permissions, rolePermissions, userRoles } from './schema'
+import { users, roles, permissions, rolePermissions, userRoles, userAuditLogs } from './schema'
 import { eq, and } from 'drizzle-orm'
 
 export async function seed() {
@@ -9,6 +9,7 @@ export async function seed() {
     console.log('Clearing existing data...')
     await db.delete(rolePermissions)
     await db.delete(userRoles)
+    await db.delete(userAuditLogs)
     await db.delete(users)
     await db.delete(permissions)
     await db.delete(roles)
