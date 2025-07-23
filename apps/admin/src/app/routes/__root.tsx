@@ -3,13 +3,14 @@ import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 import Layout from '../layouts/shell'
 import { AuthLayout } from '../layouts/auth-layout'
+import { AuthGuard } from '../layouts/auth-guard'
 import { TestDevTools } from '@/components/test-devtools'
 
 export const Route = createRootRoute({
   component: () => {
     const location = useLocation();
     const isAuthRoute = location.pathname === '/login';
-    
+
     if (isAuthRoute) {
       return (
         <>
@@ -21,12 +22,14 @@ export const Route = createRootRoute({
         </>
       );
     }
-    
+
     return (
       <>
-        <Layout>
-          <Outlet />
-        </Layout>
+        <AuthGuard>
+          <Layout>
+            <Outlet />
+          </Layout>
+        </AuthGuard>
         <TanStackRouterDevtools />
         <TestDevTools />
       </>

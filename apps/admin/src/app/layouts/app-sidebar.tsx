@@ -25,6 +25,7 @@ import {
     SidebarRail,
     SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/app/hooks/use-auth"
 
 
 const navItems = [
@@ -57,12 +58,14 @@ const navItems = [
 ]
 
 export function AppSidebar() {
+    const { hasRole } = useAuth()
+    
     return (
-        <Sidebar className="overflow-hidden" collapsible="icon">
+        <Sidebar className="overflow-hidden" collapsible="icon" data-testid="app-sidebar">
             <SidebarContent className="overflow-y-auto overflow-x-hidden">
                 {navItems.map((section, idx) => (
-                    <>
-                        <SidebarGroup key={section.section}>
+                    <div key={`${section.section}-${idx}`}>
+                        <SidebarGroup>
                             <SidebarGroupLabel>{section.section}</SidebarGroupLabel>
                             <SidebarGroupContent>
                                 <SidebarMenu>
@@ -82,8 +85,30 @@ export function AppSidebar() {
                         </SidebarGroup>
                         {/* Separator (except after the last section) */}
                         {idx < navItems.length - 1 && <SidebarSeparator />}
-                    </>
+                    </div>
                 ))}
+                
+                {/* Admin-only section */}
+                {hasRole('admin') && (
+                    <div data-testid="admin-menu">
+                        <SidebarSeparator />
+                        <SidebarGroup>
+                            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                            <SidebarGroupContent>
+                                <SidebarMenu>
+                                    <SidebarMenuItem>
+                                        <SidebarMenuButton asChild tooltip="System Settings">
+                                            <a href="/admin/system">
+                                                <Settings />
+                                                <span>System Settings</span>
+                                            </a>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    </div>
+                )}
             </SidebarContent>
             <SidebarRail />
         </Sidebar>
