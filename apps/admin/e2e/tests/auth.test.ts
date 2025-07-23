@@ -14,7 +14,7 @@ describe('Authentication E2E Tests', () => {
 
   it('should authenticate as admin user', async () => {
     // Setup with admin authentication
-    context = await setupTest(createAdminTestUser());
+    context = await setupTest(await createAdminTestUser());
     
     // Check if we're on the dashboard (authenticated)
     await context.page.waitForSelector('h1', { timeout: 5000 });
@@ -28,7 +28,7 @@ describe('Authentication E2E Tests', () => {
 
   it('should authenticate as editor user', async () => {
     // Setup with editor authentication
-    context = await setupTest(createEditorTestUser());
+    context = await setupTest(await createEditorTestUser());
     
     // Check if we're on the dashboard
     await context.page.waitForSelector('h1', { timeout: 5000 });
@@ -70,7 +70,7 @@ describe('Authentication E2E Tests', () => {
 
   it('should persist authentication across page reloads', async () => {
     // Setup with authentication
-    context = await setupTest(createAdminTestUser());
+    context = await setupTest(await createAdminTestUser());
     
     // Verify authenticated
     await context.page.waitForSelector('h1', { timeout: 5000 });

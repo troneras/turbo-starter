@@ -8,7 +8,7 @@ describe('Navigation E2E Tests', () => {
 
   beforeEach(async () => {
     // All tests start authenticated as admin
-    context = await setupTest(createAdminTestUser());
+    context = await setupTest(await createAdminTestUser());
   });
 
   afterEach(async () => {

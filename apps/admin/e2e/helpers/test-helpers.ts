@@ -36,7 +36,7 @@ export async function setupTest(authenticate: boolean | TestUser = true): Promis
   
   // Authenticate if requested
   if (authenticate) {
-    const user = typeof authenticate === 'boolean' ? createAdminTestUser() : authenticate;
+    const user = typeof authenticate === 'boolean' ? await createAdminTestUser() : authenticate;
     await authenticateTestUser(page, user);
   } else {
     // Just navigate to the base URL

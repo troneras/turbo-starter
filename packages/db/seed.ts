@@ -127,6 +127,7 @@ export async function seed() {
             email: 'alice@company.com',
             name: 'Alice Johnson',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: 'alice-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
@@ -135,6 +136,7 @@ export async function seed() {
             email: 'bob@company.com',
             name: 'Bob Smith',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: 'bob-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
@@ -143,6 +145,7 @@ export async function seed() {
             email: 'carol@company.com',
             name: 'Carol Davis',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: 'carol-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
@@ -151,6 +154,7 @@ export async function seed() {
             email: 'david@company.com',
             name: 'David Wilson',
             status: 'inactive' as const,
+            is_test_user: true,
             azure_ad_oid: 'david-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 1 week ago
@@ -159,6 +163,7 @@ export async function seed() {
             email: 'eve@company.com',
             name: 'Eve Brown',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: 'eve-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 2 * 7 * 24 * 60 * 60 * 1000) // 2 weeks ago
@@ -167,6 +172,7 @@ export async function seed() {
             email: 'frank@company.com',
             name: 'Frank Miller',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: null, // Local user without Azure AD
             azure_ad_tid: null,
             last_login_at: null // Never logged in
@@ -175,6 +181,7 @@ export async function seed() {
             email: 'grace@company.com',
             name: 'Grace Lee',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: 'grace-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
@@ -183,6 +190,7 @@ export async function seed() {
             email: 'henry@company.com',
             name: 'Henry Taylor',
             status: 'active' as const,
+            is_test_user: true,
             azure_ad_oid: 'henry-azure-oid',
             azure_ad_tid: 'tenant-123',
             last_login_at: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago

@@ -8,6 +8,7 @@ export const users = pgTable('users', {
     azure_ad_tid: varchar('azure_ad_tid', { length: 255 }),
     last_login_at: timestamp('last_login_at'),
     status: varchar('status', { length: 20 }).default('active').notNull(),
+    is_test_user: boolean('is_test_user').default(false).notNull(),
     created_by: uuid('created_by'),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

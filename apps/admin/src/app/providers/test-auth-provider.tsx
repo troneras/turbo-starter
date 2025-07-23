@@ -25,31 +25,37 @@ export function TestAuthProvider({ children, initialUser }: TestAuthProviderProp
     const testProfile = urlParams.get('testProfile');
     
     if (testProfile) {
-      const predefinedUser = getTestUser(testProfile);
-      if (predefinedUser) {
-        // Auto-login with the specified test profile
-        setTestUser(predefinedUser);
-        localStorage.setItem('test_mode', 'true');
-        localStorage.setItem('auth_jwt', predefinedUser.jwt);
-        localStorage.setItem('test_jwt', predefinedUser.jwt);
-        localStorage.setItem('test_user', JSON.stringify({
-          id: predefinedUser.id,
-          email: predefinedUser.email,
-          name: predefinedUser.name,
-          roles: predefinedUser.roles,
-          permissions: predefinedUser.permissions
-        }));
+      // Use async function to get test user
+      getTestUser(testProfile).then(predefinedUser => {
+        if (predefinedUser) {
+          // Auto-login with the specified test profile
+          setTestUser(predefinedUser);
+          localStorage.setItem('test_mode', 'true');
+          localStorage.setItem('auth_jwt', predefinedUser.jwt);
+          localStorage.setItem('test_jwt', predefinedUser.jwt);
+          localStorage.setItem('test_user', JSON.stringify({
+            id: predefinedUser.id,
+            email: predefinedUser.email,
+            name: predefinedUser.name,
+            roles: predefinedUser.roles,
+            permissions: predefinedUser.permissions
+          }));
+          setIsLoading(false);
+          
+          // Remove the query parameters from URL to clean it up
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('testMode');
+          newUrl.searchParams.delete('testProfile');
+          window.history.replaceState({}, '', newUrl.toString());
+        } else {
+          console.warn(`Unknown test profile: ${testProfile}. Available profiles: admin, editor, translator`);
+          setIsLoading(false);
+        }
+      }).catch(error => {
+        console.error('Failed to load test user:', error);
         setIsLoading(false);
-        
-        // Remove the query parameters from URL to clean it up
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete('testMode');
-        newUrl.searchParams.delete('testProfile');
-        window.history.replaceState({}, '', newUrl.toString());
-        return;
-      } else {
-        console.warn(`Unknown test profile: ${testProfile}. Available profiles: admin, editor, translator`);
-      }
+      });
+      return;
     }
     
     // Check for test JWT in localStorage (set by Puppeteer)

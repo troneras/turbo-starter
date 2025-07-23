@@ -1,5 +1,33 @@
 import type { Page } from 'puppeteer';
-import { TEST_USERS, type TestUser } from '../../src/lib/test-users';
+import { getTestUsers, type TestUser } from '../../src/lib/test-users';
+
+// Fallback test users for E2E testing (in case API is not available)
+const FALLBACK_TEST_USERS: Record<string, TestUser> = {
+  admin: {
+    id: 'e2e-admin-id',
+    email: 'admin@example.com',
+    name: 'Admin User (E2E)',
+    roles: ['admin'],
+    permissions: ['users:read', 'users:create', 'users:update', 'users:delete'],
+    jwt: 'mock-admin-jwt-token'
+  },
+  editor: {
+    id: 'e2e-editor-id',
+    email: 'editor@example.com',
+    name: 'Editor User (E2E)',
+    roles: ['editor'],
+    permissions: ['users:read', 'translations:read', 'translations:write'],
+    jwt: 'mock-editor-jwt-token'
+  },
+  translator: {
+    id: 'e2e-translator-id',
+    email: 'translator@example.com',
+    name: 'Translator User (E2E)',
+    roles: ['translator'],
+    permissions: ['translations:read', 'translations:write'],
+    jwt: 'mock-translator-jwt-token'
+  }
+};
 
 /**
  * Authenticates a test user in Puppeteer by injecting test credentials
@@ -91,22 +119,45 @@ export function createTestUser(overrides: Partial<TestUser> = {}): TestUser {
 }
 
 /**
+ * Get test users with fallback for E2E testing
+ */
+async function getTestUsersForE2E(): Promise<Record<string, TestUser>> {
+  try {
+    return await getTestUsers();
+  } catch (error) {
+    console.warn('Failed to get test users from API, using fallback for E2E:', error);
+    return FALLBACK_TEST_USERS;
+  }
+}
+
+/**
  * Creates an admin test user
  */
-export function createAdminTestUser(): TestUser {
-  return TEST_USERS.admin;
+export async function createAdminTestUser(): Promise<TestUser> {
+  const testUsers = await getTestUsersForE2E();
+  return testUsers.admin;
 }
 
 /**
  * Creates an editor test user
  */
-export function createEditorTestUser(): TestUser {
-  return TEST_USERS.editor;
+export async function createEditorTestUser(): Promise<TestUser> {
+  const testUsers = await getTestUsersForE2E();
+  return testUsers.editor;
 }
 
 /**
- * Creates a basic test user
+ * Creates a translator test user (replacing the old "user" type)
  */
-export function createBasicTestUser(): TestUser {
-  return TEST_USERS.user;
+export async function createTranslatorTestUser(): Promise<TestUser> {
+  const testUsers = await getTestUsersForE2E();
+  return testUsers.translator;
+}
+
+/**
+ * Creates a basic test user (deprecated: use createTranslatorTestUser instead)
+ * @deprecated Use createTranslatorTestUser instead
+ */
+export async function createBasicTestUser(): Promise<TestUser> {
+  return createTranslatorTestUser();
 }

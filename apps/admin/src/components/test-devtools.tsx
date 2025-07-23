@@ -1,11 +1,11 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { X, UserPlus, Users, Shield, Edit, User } from 'lucide-react';
 import { TestAuthContext } from '@/app/providers/test-auth-provider';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { TEST_USERS, type TestUser } from '@/lib/test-users';
+import { getTestUsers, type TestUser } from '@/lib/test-users';
 
 // Check if we're in test mode
 const isTestMode = () => {
@@ -20,6 +20,8 @@ export function TestDevTools() {
   const testContext = useContext(TestAuthContext);
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [testUsers, setTestUsers] = useState<Record<string, TestUser>>({});
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [customUser, setCustomUser] = useState<TestUser>({
     id: '',
     email: '',
@@ -29,6 +31,21 @@ export function TestDevTools() {
     jwt: 'mock-custom-jwt'
   });
   const [selectedPreset, setSelectedPreset] = useState<string>('');
+
+  // Load test users on mount
+  useEffect(() => {
+    if (isTestMode()) {
+      getTestUsers()
+        .then(users => {
+          setTestUsers(users);
+          setIsLoadingUsers(false);
+        })
+        .catch(error => {
+          console.error('Failed to load test users:', error);
+          setIsLoadingUsers(false);
+        });
+    }
+  }, []);
 
   // Only render in test mode
   if (!isTestMode() || !testContext) {
@@ -46,9 +63,9 @@ export function TestDevTools() {
   };
 
   const handlePresetSelect = (preset: string) => {
-    if (preset && TEST_USERS[preset]) {
+    if (preset && testUsers[preset]) {
       setSelectedPreset(preset);
-      handleLogin(TEST_USERS[preset]);
+      handleLogin(testUsers[preset]);
     }
   };
 
@@ -155,6 +172,7 @@ export function TestDevTools() {
                 size="sm"
                 variant={selectedPreset === 'admin' ? 'default' : 'outline'}
                 onClick={() => handlePresetSelect('admin')}
+                disabled={isLoadingUsers || !testUsers.admin}
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <Shield className="h-4 w-4" />
@@ -164,6 +182,7 @@ export function TestDevTools() {
                 size="sm"
                 variant={selectedPreset === 'editor' ? 'default' : 'outline'}
                 onClick={() => handlePresetSelect('editor')}
+                disabled={isLoadingUsers || !testUsers.editor}
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <Edit className="h-4 w-4" />
@@ -171,12 +190,13 @@ export function TestDevTools() {
               </Button>
               <Button
                 size="sm"
-                variant={selectedPreset === 'user' ? 'default' : 'outline'}
-                onClick={() => handlePresetSelect('user')}
+                variant={selectedPreset === 'translator' ? 'default' : 'outline'}
+                onClick={() => handlePresetSelect('translator')}
+                disabled={isLoadingUsers || !testUsers.translator}
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <User className="h-4 w-4" />
-                <span className="text-xs">User</span>
+                <span className="text-xs">Translator</span>
               </Button>
             </div>
           </div>
