@@ -1,0 +1,19 @@
+{
+  "name": "@cms/docs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "check-types": "bunx tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "vitepress": "^1.6.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
