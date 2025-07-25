@@ -6,6 +6,11 @@ out
 dist
 *.tgz
 
+# VitePress specific
+.vitepress/cache
+.vitepress/dist
+.vitepress/temp
+
 # code coverage
 coverage
 *.lcov
