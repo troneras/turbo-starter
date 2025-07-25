@@ -43,6 +43,10 @@
       "dependsOn": [
         "^db:seed"
       ]
+    },
+    "preview": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

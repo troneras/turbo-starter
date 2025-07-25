@@ -43,6 +43,13 @@
       "when": 1753182500000,
       "tag": "0005_user_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1753439318762,
+      "tag": "0006_nifty_madripoor",
+      "breakpoints": true
     }
   ]
 }
