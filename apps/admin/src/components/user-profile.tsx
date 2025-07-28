@@ -12,7 +12,7 @@ export function UserProfile() {
     <div className="flex items-center gap-3 p-2">
       <div className="flex flex-col text-sm" data-testid="user-profile-button">
         <span className="font-medium">{user.name || user.username}</span>
-        <span className="text-gray-500 text-xs" data-testid="user-email">{user.email || user.username}</span>
+        <span className="text-gray-500 text-xs" data-testid="user-email">{user.username}</span>
       </div>
       <Button
         variant="outline"

@@ -83,9 +83,8 @@ export default async function (fastify: FastifyInstance) {
         },
         onRequest: [fastify.authenticate, fastify.requireRole('admin')]
     }, async (request, reply) => {
-        const { page = 1, pageSize = 20, search, role, status } = request.query as ListUsersQuery
-
-        const result = await fastify.users.listUsers(page, pageSize, { search, role, status })
+        const { page = 1, pageSize = 20, search, role, status, sortBy, sortDirection } = request.query as ListUsersQuery
+        const result = await fastify.users.listUsers(page, pageSize, { search, role, status, sortBy, sortDirection })
 
         return result
     })

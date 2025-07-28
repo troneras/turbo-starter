@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import type { TestContext } from '../helpers/test-helpers';
 import { setupTest, teardownTest, elementExists, getTextContent } from '../helpers/test-helpers';
-import { createTestUser, createAdminTestUser, createEditorTestUser, logoutTestUser } from '../setup/auth';
+import { createAdminTestUser, createEditorTestUser } from '../setup/auth';
 
 describe('Authentication E2E Tests', () => {
   let context: TestContext;

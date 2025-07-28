@@ -44,9 +44,19 @@ export const ListUsersQuerySchema = Type.Object({
     pageSize: Type.Optional(Type.Number({ default: 20, description: 'Number of users per page (max 100)' })),
     search: Type.Optional(Type.String({ description: 'Search query for user name or email' })),
     role: Type.Optional(Type.String({ description: 'Filter by role name' })),
-    status: Type.Optional(Type.Union([Type.Literal('active'), Type.Literal('inactive')], { description: 'Filter by user status' }))
+    status: Type.Optional(Type.Union([Type.Literal('active'), Type.Literal('inactive')], { description: 'Filter by user status' })),
+    sortBy: Type.Optional(Type.Union([
+        Type.Literal('name'),
+        Type.Literal('email'), 
+        Type.Literal('lastLoginAt'),
+        Type.Literal('createdAt')
+    ], { description: 'Field to sort by' })),
+    sortDirection: Type.Optional(Type.Union([
+        Type.Literal('asc'),
+        Type.Literal('desc')
+    ], { description: 'Sort direction (ascending or descending)' }))
 }, {
-    description: 'Query parameters for listing users with search, filtering, and pagination'
+    description: 'Query parameters for listing users with search, filtering, sorting, and pagination'
 })
 
 // GET / response schema

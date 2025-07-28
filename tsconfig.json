@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@cms/tsconfig/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@cms/*": ["packages/*/index.ts", "packages/*/src/index.ts"]
+    }
+  },
+  "references": [
+    { "path": "./apps/admin" },
+    { "path": "./apps/api" },
+    { "path": "./apps/docs" },
+    { "path": "./packages/contracts" },
+    { "path": "./packages/db" },
+    { "path": "./packages/tsconfig" }
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/.turbo",
+    "**/coverage",
+    "**/e2e",
+    "**/test",
+    "**/tests",
+    "**/__tests__"
+  ]
+}

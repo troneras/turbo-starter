@@ -87,14 +87,19 @@ export type GetMeResponse = Static<typeof GetMeResponseSchema>
 /**
  * Query parameters for paginated user listing.
  * 
- * @description Controls pagination when retrieving user lists. Both parameters 
- * are optional with sensible defaults.
+ * @description Controls pagination, search, filtering, and sorting when retrieving user lists.
+ * All parameters are optional with sensible defaults.
  * 
  * @example
  * ```typescript
  * const query: ListUsersQuery = {
  *   page: 2,
- *   pageSize: 50
+ *   pageSize: 50,
+ *   search: "john",
+ *   role: "editor",
+ *   status: "active",
+ *   sortBy: "name",
+ *   sortDirection: "asc"
  * }
  * ```
  */

@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin'
 import type { FastifyInstance } from 'fastify'
-import { eq, and, count, desc, or, ilike, sql, inArray } from 'drizzle-orm'
+import { eq, and, count, desc, asc, or, ilike, sql, inArray } from 'drizzle-orm'
 import { users, roles, userRoles, permissions, rolePermissions, userAuditLogs } from '@cms/db/schema'
 declare module 'fastify' {
     interface FastifyInstance {
@@ -82,9 +82,9 @@ export function usersRepository(fastify: FastifyInstance) {
         },
 
         // List users with pagination, search, and filtering
-        async listUsers(page: number = 1, pageSize: number = 20, filters: ListUsersFilters = {}): Promise<ListUsersResult> {
+        async listUsers(page: number = 1, pageSize: number = 20, filters: ListUsersFilters & { sortBy?: string, sortDirection?: 'asc' | 'desc' } = {}): Promise<ListUsersResult> {
             const offset = (page - 1) * pageSize
-            const { search, role, status } = filters
+            const { search, role, status, sortBy = 'createdAt', sortDirection = 'desc' } = filters
 
             // Build base query with joins for role filtering if needed
             let baseQuery = fastify.db
@@ -158,8 +158,20 @@ export function usersRepository(fastify: FastifyInstance) {
             const [totalResult] = await countQuery
 
             // Get users with pagination and sorting
+            // Map sortBy field names to database columns
+            const sortColumn = (() => {
+                switch (sortBy) {
+
+                    case 'name': return users.name
+                    case 'email': return users.email
+                    case 'lastLoginAt': return users.last_login_at
+                    case 'createdAt': 
+                    default: return users.createdAt
+                }
+            })()
+
             const usersList = await baseQuery
-                .orderBy(desc(users.createdAt))
+                .orderBy(sortDirection === 'asc' ? asc(sortColumn) : desc(sortColumn))
                 .limit(pageSize)
                 .offset(offset)
 

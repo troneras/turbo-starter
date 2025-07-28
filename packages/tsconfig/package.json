@@ -1,0 +1,12 @@
+{
+  "name": "@cms/tsconfig",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared TypeScript configuration for the CMS monorepo",
+  "files": [
+    "base.json",
+    "node.json",
+    "react.json",
+    "docs.json"
+  ]
+}
