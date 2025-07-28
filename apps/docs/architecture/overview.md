@@ -57,6 +57,7 @@ fastify.register(brandsPlugin)
 Features are organized by business domain:
 - **Users & Auth** - Authentication and user management
 - **Brands** - Multi-brand configuration
+- **Languages** - Language and locale configuration
 - **Content** - Translations and localization
 - **Releases** - Deployment and versioning
 
@@ -79,6 +80,7 @@ Data isolation at multiple levels:
 ### Content Management
 
 - **Hierarchical structure**: Brand → Jurisdiction → Locale
+- **Language configuration** - Standardized language codes (e.g., en-US, fr-FR) for multi-locale content
 - **Translation workflow** with approval states
 - **Version control** for all content changes
 - **Atomic releases** with rollback capability

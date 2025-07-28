@@ -43,6 +43,7 @@ export default defineConfig({
           text: 'Resources',
           items: [
             { text: 'Users', link: '/api/users' },
+            { text: 'Languages', link: '/api/languages' },
             { text: 'Brands', link: '/api/resources/brands' },
             { text: 'Translations', link: '/api/resources/translations' },
             { text: 'Releases', link: '/api/resources/releases' }

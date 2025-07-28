@@ -104,6 +104,23 @@ GET /api/translations?brandId=123&sort=-createdAt
 - Use query parameters for filtering
 - Prefix field name with `-` for descending sort
 
+## Available Resources
+
+The API provides endpoints for managing various platform resources:
+
+### Core Resources
+- **Users** (`/api/users`) - User management, roles, and permissions
+- **Languages** (`/api/languages`) - Language configuration for multi-locale content
+- **Brands** (`/api/brands`) - Brand and organization management
+- **Translations** (`/api/translations`) - Content translation management
+- **Releases** (`/api/releases`) - Atomic content deployment and rollback
+
+### System Resources
+- **Authentication** (`/api/auth`) - JWT token management and user authentication
+- **Health** (`/health`) - System health and status monitoring
+
+Each resource follows RESTful conventions with consistent request/response patterns.
+
 ## Rate Limiting
 
 API endpoints are rate-limited to prevent abuse:
