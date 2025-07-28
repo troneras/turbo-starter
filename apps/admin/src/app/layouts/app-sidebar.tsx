@@ -49,6 +49,7 @@ const navItems = [
     {
         section: "System",
         items: [
+            { name: "Languages", href: "/languages", icon: Languages },
             { name: "Feature Flags", href: "/feature-flags", icon: ToggleRight },
             { name: "Glossary", href: "/glossary", icon: BookText },
             { name: "Audit", href: "/audit", icon: GanttChart },

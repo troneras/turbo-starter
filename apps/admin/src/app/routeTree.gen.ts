@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LanguagesRouteImport } from './routes/languages'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ const UsersRoute = UsersRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LanguagesRoute = LanguagesRouteImport.update({
+  id: '/languages',
+  path: '/languages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
+  '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/users': typeof UsersRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
+  '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/users': typeof UsersRoute
 }
@@ -60,21 +68,30 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
+  '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/brands' | '/dashboard' | '/login' | '/users'
+  fullPaths: '/' | '/brands' | '/dashboard' | '/languages' | '/login' | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/brands' | '/dashboard' | '/login' | '/users'
-  id: '__root__' | '/' | '/brands' | '/dashboard' | '/login' | '/users'
+  to: '/' | '/brands' | '/dashboard' | '/languages' | '/login' | '/users'
+  id:
+    | '__root__'
+    | '/'
+    | '/brands'
+    | '/dashboard'
+    | '/languages'
+    | '/login'
+    | '/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrandsRoute: typeof BrandsRoute
   DashboardRoute: typeof DashboardRoute
+  LanguagesRoute: typeof LanguagesRoute
   LoginRoute: typeof LoginRoute
   UsersRoute: typeof UsersRoute
 }
@@ -93,6 +110,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/languages': {
+      id: '/languages'
+      path: '/languages'
+      fullPath: '/languages'
+      preLoaderRoute: typeof LanguagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -123,6 +147,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrandsRoute: BrandsRoute,
   DashboardRoute: DashboardRoute,
+  LanguagesRoute: LanguagesRoute,
   LoginRoute: LoginRoute,
   UsersRoute: UsersRoute,
 }

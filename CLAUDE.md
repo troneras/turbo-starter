@@ -44,68 +44,124 @@ cms-platform/
 
 ### Component Relationships
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Browser / Client                        │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ HTTPS / Auth Tokens
-┌─────────────────────▼───────────────────────────────────────┐
-│               Admin UI (React)                              │
-│  ┌─────────────────┬─────────────────┬─────────────────┐   │
-│  │   Auth (MSAL)   │  Routing (TS)   │   UI (shadcn)   │   │
-│  └─────────────────┴─────────────────┴─────────────────┘   │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ HTTP API Calls
-┌─────────────────────▼───────────────────────────────────────┐
-│                Shared Contracts                             │
-│       ┌─────────────────────────────────────────┐          │
-│       │  TypeBox Schemas + TypeScript Types     │          │
-│       │  • Users, Roles, Permissions           │          │
-│       │  • Brands, Locales, Jurisdictions      │          │
-│       │  • Translations, Releases, Flags       │          │
-│       │  • Request/Response validation          │          │
-│       └─────────────────────────────────────────┘          │
-└─────────────────────┬───────────────────┬───────────────────┘
-                      │                   │
-┌─────────────────────▼───────────────────▼───────────────────┐
-│                 API Server (Fastify)                       │
-│  ┌──────────────┬──────────────┬──────────────────────────┐ │
-│  │ External     │ App Plugins  │       Routes             │ │
-│  │ Plugins      │ (Business    │   (Domain Handlers)     │ │
-│  │ (Infra)      │  Logic)      │                         │ │
-│  │ • Auth/JWT   │ • Users      │   /api/users            │ │
-│  │ • Database   │ • Brands     │   /api/brands           │ │
-│  │ • Redis      │ • Workflow   │   /api/translations     │ │
-│  │ • Security   │ • Features   │   /health               │ │
-│  └──────────────┴──────────────┴──────────────────────────┘ │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ Database Queries
-┌─────────────────────▼───────────────────────────────────────┐
-│              Database Layer (packages/db)                  │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │            Drizzle ORM Schema                          │ │
-│  │  • Multi-tenant data model                            │ │
-│  │  • RBAC (Users, Roles, Permissions)                   │ │
-│  │  • Content hierarchy (Brand → Jurisdiction → Locale)  │ │
-│  │  • Translation workflow tracking                      │ │
-│  │  • Atomic release management                          │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└─────────────────────┬───────────────────────────────────────┘
-                      │ SQL Queries
-┌─────────────────────▼───────────────────────────────────────┐
-│                PostgreSQL Database                         │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │ Tables: users, roles, brands, translations, releases   │ │
-│  │ Features: JSONB, Full-text search, Row-level security  │ │
-│  └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "Client Tier"
+        BROWSER[Browser / Client<br/>HTTPS / Auth Tokens]
+    end
 
-                    ┌─────────────────────────┐
-                    │     Redis (Caching)     │
-                    │   • Session storage     │
-                    │   • Job queues         │
-                    │   • Rate limit data    │
-                    └─────────────────────────┘
+    subgraph "Presentation Tier"
+        ADMIN_UI[Admin UI - React<br/>Port: 3000]
+        
+        subgraph "UI Components"
+            AUTH_UI[Auth MSAL<br/>Azure AD Integration]
+            ROUTING[TanStack Router<br/>Type-safe Routing]
+            COMPONENTS[shadcn/ui<br/>Component Library]
+        end
+    end
+
+    subgraph "Contract Layer"
+        CONTRACTS[Shared Contracts<br/>packages/contracts]
+        
+        subgraph "Schema Types"
+            SCHEMAS[TypeBox Schemas<br/>• Users, Roles, Permissions<br/>• Brands, Locales, Jurisdictions<br/>• Translations, Releases, Flags<br/>• Request/Response validation]
+        end
+    end
+
+    subgraph "Application Tier"
+        API_SERVER[API Server - Fastify<br/>Port: 3000]
+        
+        subgraph "External Plugins Infrastructure"
+            AUTH_JWT[Auth/JWT<br/>Token Validation]
+            DB_PLUGIN[Database<br/>Connection Pool]
+            REDIS_PLUGIN[Redis<br/>Cache & Sessions]
+            SECURITY[Security<br/>Rate Limiting, CORS]
+        end
+        
+        subgraph "App Plugins Business Logic"
+            USERS_PLUGIN[Users<br/>User Management]
+            BRANDS_PLUGIN[Brands<br/>Multi-brand Config]
+            WORKFLOW[Workflow<br/>Translation Pipeline]
+            FEATURES[Features<br/>Feature Flags]
+        end
+        
+        subgraph "Routes Domain Handlers"
+            USERS_ROUTES[/api/users<br/>User CRUD]
+            BRANDS_ROUTES[/api/brands<br/>Brand Management]
+            TRANSLATIONS_ROUTES[/api/translations<br/>Content Management]
+            HEALTH_ROUTES[/health<br/>System Status]
+        end
+    end
+
+    subgraph "Data Access Tier"
+        DB_LAYER[Database Layer<br/>packages/db]
+        
+        subgraph "ORM Schema"
+            DRIZZLE[Drizzle ORM Schema<br/>• Multi-tenant data model<br/>• RBAC Users, Roles, Permissions<br/>• Content hierarchy Brand → Jurisdiction → Locale<br/>• Translation workflow tracking<br/>• Atomic release management]
+        end
+    end
+
+    subgraph "Data Tier"
+        POSTGRES[(PostgreSQL Database<br/>Primary Data Store<br/>• Tables: users, roles, brands, translations, releases<br/>• Features: JSONB, Full-text search, Row-level security)]
+        REDIS[(Redis Caching<br/>• Session storage<br/>• Job queues<br/>• Rate limit data)]
+    end
+
+    %% Client to UI
+    BROWSER --> ADMIN_UI
+
+    %% UI Internal Components
+    ADMIN_UI --> AUTH_UI
+    ADMIN_UI --> ROUTING
+    ADMIN_UI --> COMPONENTS
+
+    %% UI to Contracts
+    ADMIN_UI --> CONTRACTS
+    CONTRACTS --> SCHEMAS
+
+    %% UI to API
+    ADMIN_UI -.->|HTTP API Calls| API_SERVER
+
+    %% Contracts to API
+    CONTRACTS --> API_SERVER
+
+    %% API Internal Flow
+    API_SERVER --> AUTH_JWT
+    API_SERVER --> DB_PLUGIN
+    API_SERVER --> REDIS_PLUGIN
+    API_SERVER --> SECURITY
+
+    API_SERVER --> USERS_PLUGIN
+    API_SERVER --> BRANDS_PLUGIN
+    API_SERVER --> WORKFLOW
+    API_SERVER --> FEATURES
+
+    API_SERVER --> USERS_ROUTES
+    API_SERVER --> BRANDS_ROUTES
+    API_SERVER --> TRANSLATIONS_ROUTES
+    API_SERVER --> HEALTH_ROUTES
+
+    %% API to Data Layer
+    API_SERVER --> DB_LAYER
+    DB_LAYER --> DRIZZLE
+
+    %% Data Layer to Storage
+    DB_LAYER -.->|SQL Queries| POSTGRES
+    API_SERVER -.->|Cache Operations| REDIS
+
+    %% Styling
+    classDef clientTier fill:#e1f5fe
+    classDef presentationTier fill:#f3e5f5
+    classDef contractTier fill:#fff3e0
+    classDef applicationTier fill:#e8f5e8
+    classDef dataTier fill:#fff8e1
+    classDef storageTier fill:#fce4ec
+
+    class BROWSER clientTier
+    class ADMIN_UI,AUTH_UI,ROUTING,COMPONENTS presentationTier
+    class CONTRACTS,SCHEMAS contractTier
+    class API_SERVER,AUTH_JWT,DB_PLUGIN,REDIS_PLUGIN,SECURITY,USERS_PLUGIN,BRANDS_PLUGIN,WORKFLOW,FEATURES,USERS_ROUTES,BRANDS_ROUTES,TRANSLATIONS_ROUTES,HEALTH_ROUTES applicationTier
+    class DB_LAYER,DRIZZLE dataTier
+    class POSTGRES,REDIS storageTier
 ```
 
 ## Development Workflow
