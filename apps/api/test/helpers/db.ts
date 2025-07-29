@@ -43,9 +43,9 @@ export async function cleanDatabase(): Promise<void> {
         'role_permissions',   // Junction table
         'user_roles',        // Junction table 
         'service_tokens',    // References users
-        'users',             // Referenced by many tables
-        'permissions',       // Referenced by role_permissions
-        'roles',             // Referenced by role_permissions and user_roles
+        'roles',             // References users (created_by, updated_by) and self (parent_role_id)
+        'users',             // Base user table
+        'permissions',       // Base permissions table
         'brands'             // Base table
     ]
 
