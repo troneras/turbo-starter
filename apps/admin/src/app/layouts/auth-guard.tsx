@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { LoadingSpinner } from '../../components/ui/loading-spinner';
 import { useAuth } from '../hooks/use-auth';
@@ -12,11 +12,15 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const handleUnauthenticated = useCallback(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate({ to: '/login' });
+      navigate({ to: '/login', replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    handleUnauthenticated();
+  }, [handleUnauthenticated]);
 
   if (isLoading) {
     return (

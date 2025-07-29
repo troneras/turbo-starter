@@ -1,20 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '../../../components/ui/button';
 import { LoadingSpinner } from '../../../components/ui/loading-spinner';
 import { useAuth } from '../../../app/hooks/use-auth';
 
 export function LoginPage() {
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
   const navigate = useNavigate();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate({ to: '/dashboard' });
+  const handleAuthenticatedRedirect = useCallback(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate({ to: '/dashboard', replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
+
+  useEffect(() => {
+    handleAuthenticatedRedirect();
+  }, [handleAuthenticatedRedirect]);
 
   const handleLogin = async () => {
     try {

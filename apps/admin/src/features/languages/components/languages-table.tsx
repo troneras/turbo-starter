@@ -2,6 +2,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowUpDown, ArrowUp, ArrowDown, Edit2, Trash2 } from 'lucide-react';
+import { useAuth } from '@/app/hooks/use-auth';
 import type { 
   LanguageTableRow, 
   LanguageSelection, 
@@ -33,6 +34,8 @@ export function LanguagesTable({
   onEditLanguage,
   onDeleteLanguage,
 }: LanguagesTableProps) {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('admin');
   const languageIds = languages.map(language => language.id);
 
   const getSortIcon = (field: LanguageSortField) => {
@@ -92,18 +95,20 @@ export function LanguagesTable({
         <table className="w-full">
           <thead className="bg-muted/50">
             <tr>
-              <th className="text-left p-3 w-12">
-                <Checkbox
-                  checked={selection.isAllSelected}
-                  ref={(el) => {
-                    if (el) {
-                      const checkbox = el as unknown as HTMLInputElement;
-                      checkbox.indeterminate = selection.indeterminate;
-                    }
-                  }}
-                  onCheckedChange={() => onToggleAll(languageIds)}
-                />
-              </th>
+              {isAdmin && (
+                <th className="text-left p-3 w-12">
+                  <Checkbox
+                    checked={selection.isAllSelected}
+                    ref={(el) => {
+                      if (el) {
+                        const checkbox = el as unknown as HTMLInputElement;
+                        checkbox.indeterminate = selection.indeterminate;
+                      }
+                    }}
+                    onCheckedChange={() => onToggleAll(languageIds)}
+                  />
+                </th>
+              )}
               <th className="text-left p-3">
                 <Button
                   variant="ghost"
@@ -126,46 +131,50 @@ export function LanguagesTable({
                   {getSortIcon('name')}
                 </Button>
               </th>
-              <th className="text-left p-3 w-32">Actions</th>
+              {isAdmin && <th className="text-left p-3 w-32">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {languages.map((language) => (
               <tr key={language.id} className="border-t hover:bg-muted/50">
-                <td className="p-3">
-                  <Checkbox
-                    checked={selection.selectedLanguages.has(language.id)}
-                    onCheckedChange={() => onToggleLanguage(language.id)}
-                  />
-                </td>
+                {isAdmin && (
+                  <td className="p-3">
+                    <Checkbox
+                      checked={selection.selectedLanguages.has(language.id)}
+                      onCheckedChange={() => onToggleLanguage(language.id)}
+                    />
+                  </td>
+                )}
                 <td className="p-3">
                   {formatLanguageCode(language.code)}
                 </td>
                 <td className="p-3">
                   <span className="font-medium">{language.name}</span>
                 </td>
-                <td className="p-3">
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditLanguage(language)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      <span className="sr-only">Edit language</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteLanguage(language)}
-                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete language</span>
-                    </Button>
-                  </div>
-                </td>
+                {isAdmin && (
+                  <td className="p-3">
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditLanguage(language)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                        <span className="sr-only">Edit language</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDeleteLanguage(language)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete language</span>
+                      </Button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -178,10 +187,12 @@ export function LanguagesTable({
           <div key={language.id} className="border rounded-lg p-4 space-y-3">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
-                <Checkbox
-                  checked={selection.selectedLanguages.has(language.id)}
-                  onCheckedChange={() => onToggleLanguage(language.id)}
-                />
+                {isAdmin && (
+                  <Checkbox
+                    checked={selection.selectedLanguages.has(language.id)}
+                    onCheckedChange={() => onToggleLanguage(language.id)}
+                  />
+                )}
                 <div>
                   <div className="mb-1">
                     {formatLanguageCode(language.code)}
@@ -189,24 +200,26 @@ export function LanguagesTable({
                   <p className="font-medium">{language.name}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEditLanguage(language)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDeleteLanguage(language)}
-                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              {isAdmin && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEditLanguage(language)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDeleteLanguage(language)}
+                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ))}

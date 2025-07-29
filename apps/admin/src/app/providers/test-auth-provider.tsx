@@ -84,10 +84,14 @@ export function TestAuthProvider({ children, initialUser }: TestAuthProviderProp
   };
 
   const logout = async () => {
+    // Clear state first to prevent race conditions
     setTestUser(null);
-    localStorage.removeItem('auth_jwt');
-    localStorage.removeItem('test_jwt');
-    localStorage.removeItem('test_user');
+    // Use setTimeout to ensure state updates are processed before localStorage cleanup
+    setTimeout(() => {
+      localStorage.removeItem('auth_jwt');
+      localStorage.removeItem('test_jwt');
+      localStorage.removeItem('test_user');
+    }, 0);
   };
 
   const hasRole = (role: string): boolean => {
@@ -138,9 +142,12 @@ export function TestAuthProvider({ children, initialUser }: TestAuthProviderProp
           permissions: user.permissions
         }));
       } else {
-        localStorage.removeItem('auth_jwt');
-        localStorage.removeItem('test_jwt');
-        localStorage.removeItem('test_user');
+        // Use setTimeout to prevent race conditions with navigation
+        setTimeout(() => {
+          localStorage.removeItem('auth_jwt');
+          localStorage.removeItem('test_jwt');
+          localStorage.removeItem('test_user');
+        }, 0);
       }
     }
   };

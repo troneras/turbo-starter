@@ -21,7 +21,7 @@ import type {
 
 export function LanguagesPage() {
   const navigate = useNavigate();
-  const searchParams = useSearch({ from: '/languages' }) as any;
+  const searchParams = useSearch({ from: '/languages' });
 
   // State for filters, sorting, and pagination
   const [filters, setFilters] = useState<LanguageFilters>({
@@ -33,7 +33,7 @@ export function LanguagesPage() {
     direction: 'asc',
   });
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(searchParams?.page || 1);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingLanguage, setEditingLanguage] = useState<LanguageTableRow | null>(null);
   const [deletingLanguage, setDeletingLanguage] = useState<LanguageTableRow | null>(null);
@@ -64,18 +64,28 @@ export function LanguagesPage() {
     totalLanguages: languages.length,
   });
 
-  // Sync URL with state
+  // Sync URL with state - debounce to prevent excessive navigation
   useEffect(() => {
-    const params: Record<string, string> = {};
-    if (filters.search) params.search = filters.search;
-    if (page > 1) params.page = page.toString();
+    const timeoutId = setTimeout(() => {
+      const params: Record<string, any> = {};
+      if (filters.search) params.search = filters.search;
+      if (page > 1) params.page = page;
 
-    navigate({
-      to: '/languages',
-      search: params,
-      replace: true,
-    });
-  }, [filters, page, navigate]);
+      // Only navigate if params actually changed
+      const currentSearch = searchParams?.search || '';
+      const currentPage = searchParams?.page || 1;
+      
+      if (filters.search !== currentSearch || page !== currentPage) {
+        navigate({
+          to: '/languages',
+          search: params,
+          replace: true,
+        });
+      }
+    }, 100); // Small debounce to prevent rapid navigation
+
+    return () => clearTimeout(timeoutId);
+  }, [filters.search, page]); // Remove navigate from dependencies
 
   const handleFiltersChange = (newFilters: LanguageFilters) => {
     setFilters(newFilters);

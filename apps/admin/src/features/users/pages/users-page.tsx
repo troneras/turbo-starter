@@ -12,13 +12,13 @@ import type { UserFilters, UserSort, SortField, SortDirection, UserTableRow } fr
 
 export function UsersPage() {
   const navigate = useNavigate();
-  const searchParams = useSearch({ from: '/users' }) as any;
+  const searchParams = useSearch({ from: '/users' });
 
   // State for filters, sorting, and pagination
   const [filters, setFilters] = useState<UserFilters>({
     search: searchParams?.search || '',
     role: searchParams?.role || undefined,
-    status: searchParams?.status || undefined,
+    status: (searchParams?.status as 'active' | 'inactive' | 'all') || undefined,
   });
 
   const [sort, setSort] = useState<UserSort>({
@@ -26,7 +26,7 @@ export function UsersPage() {
     direction: 'asc',
   });
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(searchParams?.page || 1);
   const [editingUser, setEditingUser] = useState<UserTableRow | null>(null);
 
   // Data fetching
@@ -58,21 +58,35 @@ export function UsersPage() {
     totalUsers: users.length,
   });
 
-  // Sync URL with state
+  // Sync URL with state - debounce to prevent excessive navigation
   useEffect(() => {
-    const searchParams = new URLSearchParams();
-    if (filters.search) searchParams.set('search', filters.search);
-    if (filters.role) searchParams.set('role', filters.role);
-    if (filters.status) searchParams.set('status', filters.status);
-    if (page > 1) searchParams.set('page', page.toString());
+    const timeoutId = setTimeout(() => {
+      const params: Record<string, any> = {};
+      if (filters.search) params.search = filters.search;
+      if (filters.role) params.role = filters.role;
+      if (filters.status) params.status = filters.status;
+      if (page > 1) params.page = page;
 
-    const newSearch = searchParams.toString();
-    navigate({
-      to: '/users',
-      search: newSearch ? `?${newSearch}` : undefined,
-      replace: true,
-    });
-  }, [filters, page, navigate]);
+      // Only navigate if params actually changed
+      const currentSearch = searchParams?.search || '';
+      const currentRole = searchParams?.role || '';
+      const currentStatus = searchParams?.status || '';
+      const currentPage = searchParams?.page || 1;
+      
+      if (filters.search !== currentSearch || 
+          filters.role !== currentRole || 
+          filters.status !== currentStatus || 
+          page !== currentPage) {
+        navigate({
+          to: '/users',
+          search: params,
+          replace: true,
+        });
+      }
+    }, 100); // Small debounce to prevent rapid navigation
+
+    return () => clearTimeout(timeoutId);
+  }, [filters.search, filters.role, filters.status, page]); // Remove navigate from dependencies
 
   const handleFiltersChange = (newFilters: UserFilters) => {
     setFilters(newFilters);
