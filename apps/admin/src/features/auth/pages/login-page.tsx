@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '../../../components/ui/button';
 import { LoadingSpinner } from '../../../components/ui/loading-spinner';
+import { toast } from 'sonner';
 import { useAuth } from '../../../app/hooks/use-auth';
 
 export function LoginPage() {
@@ -25,9 +26,16 @@ export function LoginPage() {
       setIsLoggingIn(true);
       setError(null);
       await login();
+      toast.success('Welcome back!', {
+        description: 'You have been successfully signed in.'
+      });
     } catch (error: any) {
       console.error('Login failed:', error);
-      setError(error?.message || 'Login failed. Please try again.');
+      const errorMessage = error?.message || 'Login failed. Please try again.';
+      setError(errorMessage);
+      toast.error('Sign in failed', {
+        description: errorMessage
+      });
     } finally {
       setIsLoggingIn(false);
     }

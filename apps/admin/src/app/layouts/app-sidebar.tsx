@@ -11,6 +11,7 @@ import {
     BookText,
     GanttChart,
     Settings,
+    Globe,
 } from "lucide-react"
 
 import {
@@ -50,6 +51,7 @@ const navItems = [
         section: "System",
         items: [
             { name: "Languages", href: "/languages", icon: Languages },
+            { name: "Jurisdictions", href: "/jurisdictions", icon: Globe },
             { name: "Feature Flags", href: "/feature-flags", icon: ToggleRight },
             { name: "Glossary", href: "/glossary", icon: BookText },
             { name: "Audit", href: "/audit", icon: GanttChart },

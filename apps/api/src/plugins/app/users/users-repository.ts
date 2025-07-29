@@ -402,6 +402,7 @@ export function usersRepository(fastify: FastifyInstance) {
                         action: 'status_changed',
                         oldValue: JSON.stringify({ status: oldStatus }),
                         newValue: JSON.stringify({ status }),
+                        reason: null,
                         isAutomatic: false
                     })
             }

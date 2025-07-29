@@ -28,6 +28,14 @@ export default defineConfig({
             { text: 'Development Workflow', link: '/guide/development-workflow' },
             { text: 'Testing', link: '/guide/testing' }
           ]
+        },
+        {
+          text: 'Platform Features',
+          items: [
+            { text: 'Jurisdictions Management', link: '/guide/jurisdictions-management' },
+            { text: 'Jurisdictions Development', link: '/guide/jurisdictions-development' },
+            { text: 'Jurisdictions Troubleshooting', link: '/guide/jurisdictions-troubleshooting' }
+          ]
         }
       ],
       '/api/': [
@@ -44,6 +52,7 @@ export default defineConfig({
           items: [
             { text: 'Users', link: '/api/users' },
             { text: 'Languages', link: '/api/languages' },
+            { text: 'Jurisdictions', link: '/api/jurisdictions' },
             { text: 'Brands', link: '/api/resources/brands' },
             { text: 'Translations', link: '/api/resources/translations' },
             { text: 'Releases', link: '/api/resources/releases' }
@@ -66,6 +75,12 @@ export default defineConfig({
             { text: 'Multi-Tenancy', link: '/architecture/multi-tenancy' },
             { text: 'RBAC', link: '/architecture/rbac' },
             { text: 'Content Hierarchy', link: '/architecture/content-hierarchy' }
+          ]
+        },
+        {
+          text: 'Data Models',
+          items: [
+            { text: 'Jurisdictions Data Model', link: '/architecture/jurisdictions-data-model' }
           ]
         }
       ]

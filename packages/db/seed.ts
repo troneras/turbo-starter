@@ -36,30 +36,30 @@ export async function seed() {
         console.log('Creating permissions...')
         const permissionData = [
             // User management permissions
-            { name: 'users:read', description: 'View users', resource: 'users', action: 'read' },
-            { name: 'users:create', description: 'Create users', resource: 'users', action: 'create' },
-            { name: 'users:update', description: 'Update users', resource: 'users', action: 'update' },
-            { name: 'users:delete', description: 'Delete users', resource: 'users', action: 'delete' },
-            { name: 'users:manage', description: 'Manage user roles and permissions', resource: 'users', action: 'manage' },
+            { name: 'users:read', description: 'View users', resource: 'users', action: 'read', category: 'users' },
+            { name: 'users:create', description: 'Create users', resource: 'users', action: 'create', category: 'users' },
+            { name: 'users:update', description: 'Update users', resource: 'users', action: 'update', category: 'users' },
+            { name: 'users:delete', description: 'Delete users', resource: 'users', action: 'delete', category: 'users' },
+            { name: 'users:manage', description: 'Manage user roles and permissions', resource: 'users', action: 'manage', category: 'users' },
 
             // Role management permissions  
-            { name: 'roles:read', description: 'View roles', resource: 'roles', action: 'read' },
-            { name: 'roles:assign', description: 'Assign roles to users', resource: 'roles', action: 'assign' },
+            { name: 'roles:read', description: 'View roles', resource: 'roles', action: 'read', category: 'roles' },
+            { name: 'roles:assign', description: 'Assign roles to users', resource: 'roles', action: 'assign', category: 'roles' },
 
             // Translation permissions
-            { name: 'translations:read', description: 'Read translations', resource: 'translations', action: 'read' },
-            { name: 'translations:write', description: 'Write translations', resource: 'translations', action: 'write' },
-            { name: 'translations:publish', description: 'Publish translations', resource: 'translations', action: 'publish' },
-            { name: 'translations:review', description: 'Review translations', resource: 'translations', action: 'review' },
+            { name: 'translations:read', description: 'Read translations', resource: 'translations', action: 'read', category: 'content' },
+            { name: 'translations:write', description: 'Write translations', resource: 'translations', action: 'write', category: 'content' },
+            { name: 'translations:publish', description: 'Publish translations', resource: 'translations', action: 'publish', category: 'content' },
+            { name: 'translations:review', description: 'Review translations', resource: 'translations', action: 'review', category: 'content' },
 
             // Brand management permissions
-            { name: 'brands:read', description: 'View brands', resource: 'brands', action: 'read' },
-            { name: 'brands:write', description: 'Manage brands', resource: 'brands', action: 'write' },
+            { name: 'brands:read', description: 'View brands', resource: 'brands', action: 'read', category: 'brands' },
+            { name: 'brands:write', description: 'Manage brands', resource: 'brands', action: 'write', category: 'brands' },
 
             // Content permissions
-            { name: 'content:read', description: 'View content', resource: 'content', action: 'read' },
-            { name: 'content:write', description: 'Edit content', resource: 'content', action: 'write' },
-            { name: 'content:delete', description: 'Delete content', resource: 'content', action: 'delete' }
+            { name: 'content:read', description: 'View content', resource: 'content', action: 'read', category: 'content' },
+            { name: 'content:write', description: 'Edit content', resource: 'content', action: 'write', category: 'content' },
+            { name: 'content:delete', description: 'Delete content', resource: 'content', action: 'delete', category: 'content' }
         ]
 
         const createdPermissions = await db.insert(permissions).values(permissionData).returning()

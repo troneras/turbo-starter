@@ -1,4 +1,5 @@
 import { Button } from './ui/button';
+import { toast } from 'sonner';
 import { useAuth } from '../app/hooks/use-auth';
 
 export function UserProfile() {
@@ -7,6 +8,19 @@ export function UserProfile() {
   if (!isAuthenticated || !user) {
     return null;
   }
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Signed out successfully', {
+        description: 'You have been logged out of your session.'
+      });
+    } catch (error) {
+      toast.error('Sign out failed', {
+        description: 'There was an error signing out. Please try again.'
+      });
+    }
+  };
 
   return (
     <div className="flex items-center gap-3 p-2">
@@ -17,7 +31,7 @@ export function UserProfile() {
       <Button
         variant="outline"
         size="sm"
-        onClick={logout}
+        onClick={handleLogout}
         data-testid="logout-button"
       >
         Sign out

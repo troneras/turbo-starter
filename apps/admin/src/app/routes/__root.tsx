@@ -5,6 +5,7 @@ import Layout from '../layouts/shell'
 import { AuthLayout } from '../layouts/auth-layout'
 import { AuthGuard } from '../layouts/auth-guard'
 import { TestDevTools } from '@/components/test-devtools'
+import { Toaster } from "@/components/ui/sonner"
 
 export const Route = createRootRoute({
   component: () => {
@@ -32,6 +33,7 @@ export const Route = createRootRoute({
         </AuthGuard>
         <TanStackRouterDevtools />
         <TestDevTools />
+        <Toaster />
       </>
     );
   },

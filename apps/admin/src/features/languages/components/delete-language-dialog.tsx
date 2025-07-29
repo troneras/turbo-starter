@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useDeleteLanguage } from '../hooks/use-languages';
 import type { LanguageTableRow } from '../types';
 
@@ -25,10 +26,21 @@ export function DeleteLanguageDialog({ language, open, onOpenChange }: DeleteLan
 
     try {
       await deleteLanguage.mutateAsync(language.id);
+      toast.success('Language deleted successfully', {
+        description: `"${language.name}" has been removed from the system.`
+      });
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to delete language:', error);
-      // Error handling - you might want to show a toast notification here
+      if (error.response?.data?.message) {
+        toast.error('Failed to delete language', {
+          description: error.response.data.message
+        });
+      } else {
+        toast.error('Failed to delete language', {
+          description: 'An unexpected error occurred. Please try again.'
+        });
+      }
     }
   };
 

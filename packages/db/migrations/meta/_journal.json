@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1752570357758,
-      "tag": "0000_dry_vulture",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1752572596556,
-      "tag": "0001_good_patch",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1752572998633,
-      "tag": "0002_brave_shaman",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1752589228961,
-      "tag": "0003_mean_thanos",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1753182331986,
-      "tag": "0004_smart_golden_guardian",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1753182500000,
-      "tag": "0005_user_search_indexes",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1753439318762,
-      "tag": "0006_nifty_madripoor",
+      "when": 1753795492980,
+      "tag": "0000_cheerful_terror",
       "breakpoints": true
     }
   ]

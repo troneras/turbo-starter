@@ -8,6 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useDeleteLanguage } from '../hooks/use-languages';
 import type { LanguageTableRow } from '../types';
 
@@ -27,17 +28,40 @@ export function BulkDeleteLanguagesDialog({
   const deleteLanguage = useDeleteLanguage();
 
   const handleBulkDelete = async () => {
+    const count = languages.length;
+    const languageText = count === 1 ? 'language' : 'languages';
+    
     try {
+      // Show loading toast
+      const loadingToast = toast.loading(`Deleting ${count} ${languageText}...`);
+      
       // Delete languages one by one
       // Note: In a real implementation, you might want to create a bulk delete API endpoint
+      let successCount = 0;
       for (const language of languages) {
         await deleteLanguage.mutateAsync(language.id);
+        successCount++;
       }
+      
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success(`${count} ${languageText} deleted successfully`, {
+        description: `All selected ${languageText} have been removed from the system.`
+      });
+      
       onComplete();
       onOpenChange(false);
     } catch (error: any) {
       console.error('Failed to delete languages:', error);
-      // Error handling - you might want to show a toast notification here
+      if (error.response?.data?.message) {
+        toast.error('Failed to delete languages', {
+          description: error.response.data.message
+        });
+      } else {
+        toast.error('Failed to delete languages', {
+          description: 'Some languages could not be deleted. Please try again.'
+        });
+      }
     }
   };
 

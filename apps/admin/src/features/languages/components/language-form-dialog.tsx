@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { useCreateLanguage, useUpdateLanguage } from '../hooks/use-languages';
 import type { LanguageTableRow, CreateLanguageFormData } from '../types';
 
@@ -84,19 +85,39 @@ export function LanguageFormDialog({ language, open, onOpenChange }: LanguageFor
             id: language.id,
             data: updateData,
           });
+          toast.success('Language updated successfully', {
+            description: `"${formData.name}" has been updated.`
+          });
+        } else {
+          toast.info('No changes detected', {
+            description: 'The language information is already up to date.'
+          });
         }
       } else {
         await createLanguage.mutateAsync(formData);
+        toast.success('Language created successfully', {
+          description: `"${formData.name}" has been added to the system.`
+        });
       }
       onOpenChange(false);
     } catch (error: any) {
       // Handle API errors
       if (error.response?.status === 409) {
         setErrors({ code: 'A language with this code already exists' });
+        toast.error('Language already exists', {
+          description: `A language with code "${formData.code}" already exists.`
+        });
       } else if (error.response?.data?.message) {
         // Set general error or specific field errors based on API response
+        toast.error('Operation failed', {
+          description: error.response.data.message
+        });
         console.error('Language operation failed:', error.response.data.message);
       } else {
+        const operation = isEditing ? 'update' : 'create';
+        toast.error(`Failed to ${operation} language`, {
+          description: 'Please check your input and try again.'
+        });
         console.error('Language operation failed:', error);
       }
     }

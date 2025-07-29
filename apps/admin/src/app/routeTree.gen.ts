@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as RolesRouteImport } from './routes/roles'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LanguagesRouteImport } from './routes/languages'
+import { Route as JurisdictionsRouteImport } from './routes/jurisdictions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesRoute = RolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -29,6 +36,11 @@ const LoginRoute = LoginRouteImport.update({
 const LanguagesRoute = LanguagesRouteImport.update({
   id: '/languages',
   path: '/languages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JurisdictionsRoute = JurisdictionsRouteImport.update({
+  id: '/jurisdictions',
+  path: '/jurisdictions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -51,16 +63,20 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
+  '/jurisdictions': typeof JurisdictionsRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
+  '/roles': typeof RolesRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
+  '/jurisdictions': typeof JurisdictionsRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
+  '/roles': typeof RolesRoute
   '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
@@ -68,22 +84,42 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
+  '/jurisdictions': typeof JurisdictionsRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
+  '/roles': typeof RolesRoute
   '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/brands' | '/dashboard' | '/languages' | '/login' | '/users'
+  fullPaths:
+    | '/'
+    | '/brands'
+    | '/dashboard'
+    | '/jurisdictions'
+    | '/languages'
+    | '/login'
+    | '/roles'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/brands' | '/dashboard' | '/languages' | '/login' | '/users'
+  to:
+    | '/'
+    | '/brands'
+    | '/dashboard'
+    | '/jurisdictions'
+    | '/languages'
+    | '/login'
+    | '/roles'
+    | '/users'
   id:
     | '__root__'
     | '/'
     | '/brands'
     | '/dashboard'
+    | '/jurisdictions'
     | '/languages'
     | '/login'
+    | '/roles'
     | '/users'
   fileRoutesById: FileRoutesById
 }
@@ -91,8 +127,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BrandsRoute: typeof BrandsRoute
   DashboardRoute: typeof DashboardRoute
+  JurisdictionsRoute: typeof JurisdictionsRoute
   LanguagesRoute: typeof LanguagesRoute
   LoginRoute: typeof LoginRoute
+  RolesRoute: typeof RolesRoute
   UsersRoute: typeof UsersRoute
 }
 
@@ -103,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles': {
+      id: '/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof RolesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -117,6 +162,13 @@ declare module '@tanstack/react-router' {
       path: '/languages'
       fullPath: '/languages'
       preLoaderRoute: typeof LanguagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jurisdictions': {
+      id: '/jurisdictions'
+      path: '/jurisdictions'
+      fullPath: '/jurisdictions'
+      preLoaderRoute: typeof JurisdictionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -147,8 +199,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrandsRoute: BrandsRoute,
   DashboardRoute: DashboardRoute,
+  JurisdictionsRoute: JurisdictionsRoute,
   LanguagesRoute: LanguagesRoute,
   LoginRoute: LoginRoute,
+  RolesRoute: RolesRoute,
   UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport

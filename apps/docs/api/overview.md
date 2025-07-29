@@ -111,6 +111,7 @@ The API provides endpoints for managing various platform resources:
 ### Core Resources
 - **Users** (`/api/users`) - User management, roles, and permissions
 - **Languages** (`/api/languages`) - Language configuration for multi-locale content
+- **Jurisdictions** (`/api/jurisdictions`) - Regulatory jurisdiction management for compliance
 - **Brands** (`/api/brands`) - Brand and organization management
 - **Translations** (`/api/translations`) - Content translation management
 - **Releases** (`/api/releases`) - Atomic content deployment and rollback
