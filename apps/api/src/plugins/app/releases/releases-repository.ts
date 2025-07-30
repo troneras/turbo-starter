@@ -99,8 +99,32 @@ export function releasesRepository(fastify: FastifyInstance) {
           .where(whereClause)
       ])
 
+      // Get change counts and conflict info for each release
+      const releasesWithStats = await Promise.all(
+        releasesList.map(async (release) => {
+          const [stats, conflicts] = await Promise.all([
+            this.getReleaseStats(Number(release.id)),
+            release.status === 'CLOSED' ? this.checkReleaseConflicts(Number(release.id)) : null
+          ])
+          
+          const formattedRelease = this.formatRelease(release) as any
+          formattedRelease.changeCount = stats.entityCount
+          
+          if (conflicts) {
+            formattedRelease.conflicts = {
+              hasConflicts: conflicts.hasConflicts,
+              parallelCount: conflicts.parallelConflicts,
+              overwriteCount: conflicts.overwriteConflicts,
+              totalCount: conflicts.totalConflicts
+            }
+          }
+          
+          return formattedRelease
+        })
+      )
+
       return {
-        releases: releasesList.map(r => this.formatRelease(r)),
+        releases: releasesWithStats,
         total: countResult?.total || 0,
         limit,
         offset
@@ -378,6 +402,54 @@ export function releasesRepository(fastify: FastifyInstance) {
       }
 
       return Object.keys(differences).length > 0 ? differences : undefined
+    },
+
+    /**
+     * Check release conflicts
+     */
+    async checkReleaseConflicts(releaseId: number): Promise<{
+      hasConflicts: boolean;
+      parallelConflicts: number;
+      overwriteConflicts: number;
+      totalConflicts: number;
+    }> {
+      const result = await fastify.db.execute(
+        sql`SELECT * FROM validate_release_for_deployment(${releaseId})`
+      )
+      const validation = (result as any)[0]
+      
+      return {
+        hasConflicts: validation.conflict_count > 0,
+        parallelConflicts: Number(validation.parallel_conflicts || 0),
+        overwriteConflicts: Number(validation.overwrite_conflicts || 0),
+        totalConflicts: Number(validation.conflict_count || 0)
+      }
+    },
+
+    /**
+     * Get release statistics
+     */
+    async getReleaseStats(releaseId: number): Promise<{
+      entityCount: number;
+      createCount: number;
+      updateCount: number;
+      deleteCount: number;
+      relationCount: number;
+      translationCount: number;
+    }> {
+      const result = await fastify.db.execute(
+        sql`SELECT * FROM get_release_stats(${releaseId})`
+      )
+      const stats = (result as any)[0]
+      
+      return {
+        entityCount: Number(stats.entity_count || 0),
+        createCount: Number(stats.create_count || 0),
+        updateCount: Number(stats.update_count || 0),
+        deleteCount: Number(stats.delete_count || 0),
+        relationCount: Number(stats.relation_count || 0),
+        translationCount: Number(stats.translation_count || 0)
+      }
     },
 
     /**

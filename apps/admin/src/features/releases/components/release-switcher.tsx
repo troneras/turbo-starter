@@ -97,6 +97,11 @@ export function ReleaseSwitcher({ onCreateNew }: ReleaseSwitcherProps) {
             <span className="truncate">
               {activeRelease ? activeRelease.name : 'Select release...'}
             </span>
+            {activeRelease && activeRelease.status !== 'DEPLOYED' && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0">
+                Preview
+              </Badge>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             {activeRelease && (

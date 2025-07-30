@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { GitBranch, Plus, Rocket, RotateCcw, GitCompare, Loader2 } from 'lucide-react';
+import { GitBranch, Plus, Rocket, RotateCcw, GitCompare, Loader2, Check, Trash2, RefreshCw, AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -32,6 +32,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import { useRelease } from '@/app/providers/release-provider';
@@ -42,6 +55,7 @@ import type {
   PreviewDiffResponse,
 } from '@cms/contracts/types/releases';
 import { MoreHorizontal } from 'lucide-react';
+import { ReleaseDetailsDrawer } from '../components/release-details-drawer';
 
 export function ReleasesPage() {
   const queryClient = useQueryClient();
@@ -52,6 +66,10 @@ export function ReleasesPage() {
   const [diffDialogOpen, setDiffDialogOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
   const [diffData, setDiffData] = useState<PreviewDiffResponse | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerRelease, setDrawerRelease] = useState<Release | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [formData, setFormData] = useState<CreateReleaseRequest>({
     name: '',
     description: '',
@@ -158,6 +176,17 @@ export function ReleasesPage() {
 
   const releases = data?.releases || [];
 
+  // Filter releases based on search and status
+  const filteredReleases = releases.filter((release) => {
+    const matchesSearch = !searchTerm || 
+      release.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      release.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || release.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   const getStatusVariant = (status: Release['status']) => {
     switch (status) {
       case 'OPEN':
@@ -262,10 +291,39 @@ export function ReleasesPage() {
       {/* Releases Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Releases</CardTitle>
-          <CardDescription>
-            View and manage all releases in the system
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>All Releases</CardTitle>
+              <CardDescription>
+                View and manage all releases in the system
+              </CardDescription>
+            </div>
+          </div>
+          
+          {/* Filters */}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search releases..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="CLOSED">Closed</SelectItem>
+                <SelectItem value="DEPLOYED">Deployed</SelectItem>
+                <SelectItem value="ROLLED_BACK">Rolled Back</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -274,12 +332,18 @@ export function ReleasesPage() {
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
-          ) : releases.length === 0 ? (
+          ) : filteredReleases.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-muted-foreground">No releases found</p>
-              <Button onClick={() => setCreateDialogOpen(true)} className="mt-4">
-                Create your first release
-              </Button>
+              <p className="text-muted-foreground">
+                {searchTerm || statusFilter !== 'all' 
+                  ? 'No releases match your filters' 
+                  : 'No releases found'}
+              </p>
+              {releases.length === 0 && (
+                <Button onClick={() => setCreateDialogOpen(true)} className="mt-4">
+                  Create your first release
+                </Button>
+              )}
             </div>
           ) : (
             <Table>
@@ -287,14 +351,22 @@ export function ReleasesPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Changes</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Deployed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {releases.map((release) => (
-                  <TableRow key={release.id}>
+                {filteredReleases.map((release) => (
+                  <TableRow 
+                    key={release.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      setDrawerRelease(release);
+                      setDrawerOpen(true);
+                    }}
+                  >
                     <TableCell>
                       <div>
                         <p className="font-medium">{release.name}</p>
@@ -304,9 +376,47 @@ export function ReleasesPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(release.status)}>
-                        {release.status}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={getStatusVariant(release.status)}>
+                          {release.status}
+                        </Badge>
+                        {release.conflicts?.hasConflicts && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center space-x-1 cursor-help">
+                                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                                  <span className="text-xs text-destructive">
+                                    {release.conflicts.totalCount}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <div className="space-y-1">
+                                  <p className="font-semibold">Release Conflicts</p>
+                                  {release.conflicts.parallelCount > 0 && (
+                                    <p className="text-sm">{release.conflicts.parallelCount} parallel work conflicts</p>
+                                  )}
+                                  {release.conflicts.overwriteCount > 0 && (
+                                    <p className="text-sm">{release.conflicts.overwriteCount} overwrite conflicts</p>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {release.changeCount !== undefined && release.changeCount > 0 ? (
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {release.changeCount} {release.changeCount === 1 ? 'change' : 'changes'}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No changes</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div>
@@ -329,39 +439,123 @@ export function ReleasesPage() {
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => setActiveRelease(release)}
-                            disabled={activeRelease?.id === release.id}
-                          >
-                            <GitBranch className="mr-2 h-4 w-4" />
-                            Set as Active
-                          </DropdownMenuItem>
+                          {/* Status-specific actions */}
+                          {release.status === 'OPEN' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setActiveRelease(release)}
+                                disabled={activeRelease?.id === release.id}
+                              >
+                                <GitBranch className="mr-2 h-4 w-4" />
+                                Set as Active
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRelease(release);
+                                  // TODO: Implement close dialog
+                                }}
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Close Release
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRelease(release);
+                                  // TODO: Implement delete dialog
+                                }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {release.status === 'CLOSED' && (
-                            <DropdownMenuItem onClick={() => handleDeploy(release)}>
-                              <Rocket className="mr-2 h-4 w-4" />
-                              Deploy
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setActiveRelease(release)}
+                                disabled={activeRelease?.id === release.id}
+                              >
+                                <GitBranch className="mr-2 h-4 w-4" />
+                                Set as Active
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeploy(release)}
+                                className="font-semibold"
+                              >
+                                <Rocket className="mr-2 h-4 w-4" />
+                                Deploy to Production
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRelease(release);
+                                  // TODO: Implement reopen
+                                }}
+                              >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Re-open
+                              </DropdownMenuItem>
+                              {getCurrentDeployedRelease() && (
+                                <DropdownMenuItem
+                                  onClick={() => handlePreviewDiff(getCurrentDeployedRelease()!, release)}
+                                >
+                                  <GitCompare className="mr-2 h-4 w-4" />
+                                  Preview Changes
+                                </DropdownMenuItem>
+                              )}
+                            </>
                           )}
-                          {release.status === 'DEPLOYED' && release.deploySeq && release.deploySeq > 1 && (
-                            <DropdownMenuItem onClick={() => handleRollback(release)}>
-                              <RotateCcw className="mr-2 h-4 w-4" />
-                              Rollback
-                            </DropdownMenuItem>
+                          {release.status === 'DEPLOYED' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setActiveRelease(release)}
+                                disabled={activeRelease?.id === release.id}
+                              >
+                                <GitBranch className="mr-2 h-4 w-4" />
+                                Set as Active
+                              </DropdownMenuItem>
+                              {release.deploySeq && release.deploySeq > 1 && (
+                                <DropdownMenuItem onClick={() => handleRollback(release)}>
+                                  <RotateCcw className="mr-2 h-4 w-4" />
+                                  Rollback
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => handlePreviewDiff(getCurrentDeployedRelease()!, release)}
+                              >
+                                <GitCompare className="mr-2 h-4 w-4" />
+                                View Changes
+                              </DropdownMenuItem>
+                            </>
                           )}
-                          {getCurrentDeployedRelease() && release.status !== 'DEPLOYED' && (
-                            <DropdownMenuItem
-                              onClick={() => handlePreviewDiff(getCurrentDeployedRelease()!, release)}
-                            >
-                              <GitCompare className="mr-2 h-4 w-4" />
-                              Preview Changes
-                            </DropdownMenuItem>
+                          {release.status === 'ROLLED_BACK' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => setActiveRelease(release)}
+                                disabled={activeRelease?.id === release.id}
+                              >
+                                <GitBranch className="mr-2 h-4 w-4" />
+                                Set as Active
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeploy(release)}
+                              >
+                                <Rocket className="mr-2 h-4 w-4" />
+                                Re-deploy
+                              </DropdownMenuItem>
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -560,6 +754,30 @@ export function ReleasesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Release Details Drawer */}
+      <ReleaseDetailsDrawer
+        release={drawerRelease}
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setDrawerRelease(null);
+        }}
+        onDeploy={(release) => {
+          setDrawerOpen(false);
+          handleDeploy(release);
+        }}
+        onCloseRelease={() => {
+          setDrawerOpen(false);
+          // TODO: Implement close release functionality
+          toast.info('Close release functionality not yet implemented');
+        }}
+        onReopen={() => {
+          setDrawerOpen(false);
+          // TODO: Implement reopen functionality
+          toast.info('Reopen functionality not yet implemented');
+        }}
+      />
     </div>
   );
 }

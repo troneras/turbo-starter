@@ -27,6 +27,15 @@ export const ReleaseSchema = Type.Object({
   deployedBy: Type.Union([Type.String({ format: "uuid" }), Type.Null()], { 
     description: "User ID who deployed the release" 
   }),
+  changeCount: Type.Optional(Type.Number({ 
+    description: "Number of changes in this release" 
+  })),
+  conflicts: Type.Optional(Type.Object({
+    hasConflicts: Type.Boolean({ description: "Whether the release has any conflicts" }),
+    parallelCount: Type.Number({ description: "Number of parallel work conflicts" }),
+    overwriteCount: Type.Number({ description: "Number of overwrite conflicts" }),
+    totalCount: Type.Number({ description: "Total number of conflicts" })
+  }, { description: "Conflict information for CLOSED releases" })),
 }, {
   description: "Release entity representing a logical grouping of content changes"
 })
