@@ -14,6 +14,6 @@ export function createMigrationClient(connectionString: string) {
 
 // Keep the old export for compatibility during migration
 const connectionString =
-  process.env.DATABASE_URL || "postgresql://dev:dev123@localhost:5432/cms_platform_dev";
+  process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || "postgresql://dev:dev123@localhost:5432/cms_platform_dev";
 export const migrationClient = postgres(connectionString, { max: 1 });
 export const db = drizzle(postgres(connectionString));

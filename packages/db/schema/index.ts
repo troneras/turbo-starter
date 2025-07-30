@@ -148,3 +148,8 @@ export type NewRolePermission = typeof rolePermissions.$inferInsert
 
 export type UserAuditLog = typeof userAuditLogs.$inferSelect
 export type NewUserAuditLog = typeof userAuditLogs.$inferInsert
+
+// Re-export release and entity schemas
+export * from './releases'
+export * from './entities'
+export * from './views'

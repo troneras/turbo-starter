@@ -20,8 +20,8 @@ features:
     details: Comprehensive regulatory jurisdiction management with content hierarchy and compliance tools
   - title: Multi-Tenant Architecture
     details: Support for multiple brands, jurisdictions, and locales with flexible content inheritance
-  - title: Atomic Deployments
-    details: Release management with feature flags and rollback capabilities
+  - title: Git-like Release Management
+    details: Edition-based releases with atomic deployments, instant rollback, and parallel development
   - title: Built with Modern Tools
     details: TurboRepo, Bun, Fastify, React, and Drizzle ORM
 ---

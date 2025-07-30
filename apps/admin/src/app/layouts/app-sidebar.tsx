@@ -12,6 +12,7 @@ import {
     GanttChart,
     Settings,
     Globe,
+    GitBranch,
 } from "lucide-react"
 
 import {
@@ -27,6 +28,7 @@ import {
     SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { useAuth } from "@/app/hooks/use-auth"
+import { Link } from '@tanstack/react-router'
 
 
 const navItems = [
@@ -62,7 +64,7 @@ const navItems = [
 
 export function AppSidebar() {
     const { hasRole } = useAuth()
-    
+
     return (
         <Sidebar className="overflow-hidden" collapsible="icon" data-testid="app-sidebar">
             <SidebarContent className="overflow-y-auto overflow-x-hidden">
@@ -75,10 +77,10 @@ export function AppSidebar() {
                                     {section.items.map((item) => (
                                         <SidebarMenuItem key={item.name}>
                                             <SidebarMenuButton asChild tooltip={item.name}>
-                                                <a href={item.href}>
+                                                <Link to={item.href}>
                                                     <item.icon />
                                                     <span>{item.name}</span>
-                                                </a>
+                                                </Link>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
 
@@ -90,7 +92,7 @@ export function AppSidebar() {
                         {idx < navItems.length - 1 && <SidebarSeparator />}
                     </div>
                 ))}
-                
+
                 {/* Admin-only section */}
                 {hasRole('admin') && (
                     <div data-testid="admin-menu">
@@ -101,10 +103,10 @@ export function AppSidebar() {
                                 <SidebarMenu>
                                     <SidebarMenuItem>
                                         <SidebarMenuButton asChild tooltip="System Settings">
-                                            <a href="/admin/system">
+                                            <Link to="/admin/system">
                                                 <Settings />
                                                 <span>System Settings</span>
-                                            </a>
+                                            </Link>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
                                 </SidebarMenu>

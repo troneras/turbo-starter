@@ -97,7 +97,7 @@ function permissionsRepository(db: any) {
                 .offset(offset)
             
             return {
-                permissions: permissionsList.map(permission => ({
+                permissions: permissionsList.map((permission: any) => ({
                     ...permission,
                     created_at: permission.createdAt.toISOString(),
                     updated_at: permission.updatedAt.toISOString()
@@ -219,7 +219,7 @@ function permissionsRepository(db: any) {
                 .where(eq(permissions.category, category))
                 .orderBy(asc(permissions.name))
                 
-            return permissionsList.map(permission => ({
+            return permissionsList.map((permission: any) => ({
                 ...permission,
                 created_at: permission.createdAt.toISOString(),
                 updated_at: permission.updatedAt.toISOString()
@@ -241,7 +241,7 @@ function permissionsRepository(db: any) {
                 )
                 .orderBy(asc(permissions.name))
                 
-            return permissionsList.map(permission => ({
+            return permissionsList.map((permission: any) => ({
                 ...permission,
                 created_at: permission.createdAt.toISOString(),
                 updated_at: permission.updatedAt.toISOString()

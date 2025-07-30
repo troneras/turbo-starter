@@ -39,6 +39,9 @@ function setTestEnv() {
     if (!process.env.NODE_ENV) {
         process.env.NODE_ENV = "test"
     }
+
+    // Set TEST_MODE for test authentication
+    process.env.TEST_MODE = "true"
 }
 
 export function expectValidationError(res: LightMyRequestResponse, expectedMessage: string) {

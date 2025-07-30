@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as RolesRouteImport } from './routes/roles'
+import { Route as ReleasesRouteImport } from './routes/releases'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LanguagesRouteImport } from './routes/languages'
 import { Route as JurisdictionsRouteImport } from './routes/jurisdictions'
@@ -26,6 +27,11 @@ const UsersRoute = UsersRouteImport.update({
 const RolesRoute = RolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReleasesRoute = ReleasesRouteImport.update({
+  id: '/releases',
+  path: '/releases',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/jurisdictions': typeof JurisdictionsRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
+  '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
   '/users': typeof UsersRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/jurisdictions': typeof JurisdictionsRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
+  '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
   '/users': typeof UsersRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/jurisdictions': typeof JurisdictionsRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
+  '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
   '/users': typeof UsersRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/languages'
     | '/login'
+    | '/releases'
     | '/roles'
     | '/users'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/languages'
     | '/login'
+    | '/releases'
     | '/roles'
     | '/users'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/jurisdictions'
     | '/languages'
     | '/login'
+    | '/releases'
     | '/roles'
     | '/users'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   JurisdictionsRoute: typeof JurisdictionsRoute
   LanguagesRoute: typeof LanguagesRoute
   LoginRoute: typeof LoginRoute
+  ReleasesRoute: typeof ReleasesRoute
   RolesRoute: typeof RolesRoute
   UsersRoute: typeof UsersRoute
 }
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/roles'
       preLoaderRoute: typeof RolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/releases': {
+      id: '/releases'
+      path: '/releases'
+      fullPath: '/releases'
+      preLoaderRoute: typeof ReleasesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   JurisdictionsRoute: JurisdictionsRoute,
   LanguagesRoute: LanguagesRoute,
   LoginRoute: LoginRoute,
+  ReleasesRoute: ReleasesRoute,
   RolesRoute: RolesRoute,
   UsersRoute: UsersRoute,
 }

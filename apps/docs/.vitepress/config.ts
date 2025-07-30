@@ -8,7 +8,8 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'API Reference', link: '/api/overview' },
-      { text: 'Architecture', link: '/architecture/overview' }
+      { text: 'Architecture', link: '/architecture/overview' },
+      { text: 'Concepts', link: '/concepts/release-philosophy' }
     ],
 
     sidebar: {
@@ -34,7 +35,8 @@ export default defineConfig({
           items: [
             { text: 'Jurisdictions Management', link: '/guide/jurisdictions-management' },
             { text: 'Jurisdictions Development', link: '/guide/jurisdictions-development' },
-            { text: 'Jurisdictions Troubleshooting', link: '/guide/jurisdictions-troubleshooting' }
+            { text: 'Jurisdictions Troubleshooting', link: '/guide/jurisdictions-troubleshooting' },
+            { text: 'Working with Releases', link: '/guide/working-with-releases' }
           ]
         }
       ],
@@ -74,13 +76,29 @@ export default defineConfig({
           items: [
             { text: 'Multi-Tenancy', link: '/architecture/multi-tenancy' },
             { text: 'RBAC', link: '/architecture/rbac' },
-            { text: 'Content Hierarchy', link: '/architecture/content-hierarchy' }
+            { text: 'Content Hierarchy', link: '/architecture/content-hierarchy' },
+            { text: 'Release Philosophy', link: '/concepts/release-philosophy' }
+          ]
+        },
+        {
+          text: 'Release Management',
+          items: [
+            { text: 'Architecture', link: '/architecture/release-management' },
+            { text: 'Developer Guide', link: '/guide/working-with-releases' }
           ]
         },
         {
           text: 'Data Models',
           items: [
             { text: 'Jurisdictions Data Model', link: '/architecture/jurisdictions-data-model' }
+          ]
+        }
+      ],
+      '/concepts/': [
+        {
+          text: 'Conceptual Guides',
+          items: [
+            { text: 'Release Philosophy', link: '/concepts/release-philosophy' }
           ]
         }
       ]

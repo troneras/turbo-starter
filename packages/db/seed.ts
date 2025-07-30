@@ -122,6 +122,41 @@ export async function seed() {
 
     // Create diverse test users for the UI
     console.log('Creating test users...')
+
+    // First, create the special test authentication users with known UUIDs
+    const authTestUsers = [
+        {
+            id: '11111111-1111-1111-1111-111111111111', // admin-test-123 equivalent
+            email: 'admin@example.com',
+            name: 'Admin User',
+            status: 'active' as const,
+            is_test_user: true,
+            azure_ad_oid: null,
+            azure_ad_tid: null,
+            last_login_at: new Date()
+        },
+        {
+            id: '22222222-2222-2222-2222-222222222222', // editor-test-123 equivalent
+            email: 'editor@example.com',
+            name: 'Editor User',
+            status: 'active' as const,
+            is_test_user: true,
+            azure_ad_oid: null,
+            azure_ad_tid: null,
+            last_login_at: new Date()
+        },
+        {
+            id: '33333333-3333-3333-3333-333333333333', // user-test-123 equivalent
+            email: 'user@example.com',
+            name: 'Basic User',
+            status: 'active' as const,
+            is_test_user: true,
+            azure_ad_oid: null,
+            azure_ad_tid: null,
+            last_login_at: new Date()
+        }
+    ]
+
     const testUsers = [
         {
             email: 'alice@company.com',
@@ -197,12 +232,23 @@ export async function seed() {
         }
     ]
 
+    // Insert auth test users first
+    const authUsers = await db.insert(users).values(authTestUsers).returning()
+    console.log(`Created ${authUsers.length} auth test users`)
+
+    // Insert regular test users
     const sampleUsers = await db.insert(users).values(testUsers).returning()
-    console.log(`Created ${sampleUsers.length} test users`)
+    console.log(`Created ${sampleUsers.length} regular test users`)
 
     // Assign roles to users to demonstrate different role combinations
     console.log('Assigning roles to test users...')
     const userRoleAssignments = [
+        // Auth test users - these match the test authentication tokens
+        { userId: authUsers[0]?.id, roleId: createdRoles.find(r => r.name === 'admin')!.id },
+        { userId: authUsers[0]?.id, roleId: createdRoles.find(r => r.name === 'user')!.id },
+        { userId: authUsers[1]?.id, roleId: createdRoles.find(r => r.name === 'editor')!.id },
+        { userId: authUsers[1]?.id, roleId: createdRoles.find(r => r.name === 'user')!.id },
+        { userId: authUsers[2]?.id, roleId: createdRoles.find(r => r.name === 'user')!.id },
         // Alice - Admin + Editor (multiple roles)
         { userId: sampleUsers[0]?.id, roleId: createdRoles.find(r => r.name === 'admin')!.id },
         { userId: sampleUsers[0]?.id, roleId: createdRoles.find(r => r.name === 'editor')!.id },

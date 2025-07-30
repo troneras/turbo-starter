@@ -16,8 +16,8 @@ interface RoleWithPermissions {
     parent_role_id: number | null
     created_by: string | null
     updated_by: string | null
-    created_at: Date
-    updated_at: Date
+    created_at: string
+    updated_at: string
     userCount: number
     permissions: Array<{
         id: number
@@ -25,7 +25,7 @@ interface RoleWithPermissions {
         description: string | null
         resource: string
         action: string
-        created_at: Date
+        created_at: string
     }>
 }
 
@@ -72,27 +72,27 @@ export function rolesRepository(fastify: FastifyInstance) {
                     like(roles.name, `%${search}%`),
                     like(roles.description, `%${search}%`)
                 )
-                baseQuery = baseQuery.where(searchFilter)
-                countQuery = countQuery.where(searchFilter)
+                baseQuery = (baseQuery as any).where(searchFilter)
+                countQuery = (countQuery as any).where(searchFilter)
             }
 
             // Apply sorting
             const sortColumn = roles[sortBy]
-            baseQuery = baseQuery.orderBy(sortDirection === 'desc' ? desc(sortColumn) : asc(sortColumn))
+            baseQuery = (baseQuery as any).orderBy(sortDirection === 'desc' ? desc(sortColumn) : asc(sortColumn))
 
             // Execute queries
             const [allRoles, totalResult] = await Promise.all([
-                baseQuery.limit(pageSize).offset(offset),
-                countQuery
+                (baseQuery as any).limit(pageSize).offset(offset),
+                countQuery as any
             ])
 
-            const total = totalResult[0].count as number
+            const total = totalResult[0]?.count as number || 0
             const totalPages = Math.ceil(total / pageSize)
 
             if (!includePermissions) {
                 // Even without permissions, we still need user counts
                 const rolesWithUserCounts = await Promise.all(
-                    allRoles.map(async (role) => {
+                    allRoles.map(async (role: any) => {
                         const userCountResult = await fastify.db
                             .select({ count: count() })
                             .from(userRoles)
@@ -116,7 +116,7 @@ export function rolesRepository(fastify: FastifyInstance) {
 
             // Get permissions and user counts for each role
             const rolesWithPermissions = await Promise.all(
-                allRoles.map(async (role) => {
+                allRoles.map(async (role: any) => {
                     const [rolePermissionsData, userCountResult] = await Promise.all([
                         fastify.db
                             .select({
@@ -160,7 +160,7 @@ export function rolesRepository(fastify: FastifyInstance) {
             if (!includePermissions) {
                 // Even without permissions, we still need user counts
                 const rolesWithUserCounts = await Promise.all(
-                    allRoles.map(async (role) => {
+                    allRoles.map(async (role: any) => {
                         const userCountResult = await fastify.db
                             .select({ count: count() })
                             .from(userRoles)
@@ -181,7 +181,7 @@ export function rolesRepository(fastify: FastifyInstance) {
 
             // Get permissions and user counts for each role
             const rolesWithPermissions = await Promise.all(
-                allRoles.map(async (role) => {
+                allRoles.map(async (role: any) => {
                     const [rolePermissionsData, userCountResult] = await Promise.all([
                         fastify.db
                             .select({
@@ -326,13 +326,13 @@ export function rolesRepository(fastify: FastifyInstance) {
                     await tx
                         .insert(rolePermissions)
                         .values(data.permissions.map(permissionId => ({
-                            roleId: newRole.id,
+                            roleId: newRole!.id,
                             permissionId
                         })))
                 }
 
                 // Return the created role with permissions
-                return this.getRoleById(newRole.id) as Promise<RoleWithPermissions>
+                return this.getRoleById(newRole!.id) as Promise<RoleWithPermissions>
             })
         },
 

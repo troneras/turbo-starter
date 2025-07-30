@@ -310,6 +310,18 @@ export default async function (fastify: FastifyInstance) {
 
         const roles = await fastify.roles.getAllRoles(isAdmin)
 
-        return { roles } as RolesListResponse
+        // Format roles to match the schema
+        const formattedRoles = roles.map((role: any) => ({
+            ...role,
+            created_at: role.created_at instanceof Date ? role.created_at.toISOString() : role.created_at,
+            updated_at: role.updated_at instanceof Date ? role.updated_at.toISOString() : role.updated_at,
+            permissions: role.permissions.map((p: any) => ({
+                ...p,
+                created_at: p.createdAt?.toISOString() || p.created_at,
+                updated_at: p.updatedAt?.toISOString() || p.updated_at
+            }))
+        }))
+
+        return { roles: formattedRoles }
     })
 }

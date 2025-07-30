@@ -238,9 +238,66 @@ const createUser = async (data: CreateUser) => {
 ### Role-Based Access Control
 
 - **Roles**: `admin`, `editor`, `user`, `service`
-- **Permissions**: Action-based (`users:create`, `translations:publish`)
+- **Permissions**: Action-based (`users:create`, `translations:publish`, `releases:deploy`)
 - **Inheritance**: Roles can inherit permissions from other roles
 - **Multi-brand**: Users can have different roles per brand
+
+### Release Management System
+
+The platform implements an **edition-based release system** inspired by Oracle Edition-Based Redefinition (EBR) and Git's branching model. This provides atomic content deployments with instant rollback capabilities.
+
+#### Architecture Overview
+
+**Core Tables**:
+- `releases` - Tracks all releases with status (OPEN, CLOSED, DEPLOYED, ROLLED_BACK)
+- `entity_versions` - Immutable snapshots of all content tied to releases
+- `deploy_seq` - Monotonic sequence ensuring consistent deployment ordering
+
+**Key Concepts**:
+
+1. **Release Context**: Every API request operates within a release context
+   - Set via `X-CMS-Release` header or defaults to latest deployed
+   - Stored in PostgreSQL session variable `cms.active_release`
+   - All queries automatically filter to show release-appropriate content
+
+2. **Entity Versioning**: All content is versioned and immutable
+   - Each change creates a new `entity_version` linked to current release
+   - Supports CREATE, UPDATE, DELETE operations
+   - Full audit trail with who/when/what
+
+3. **Canonical Views**: Database views provide release-aware content
+   - `v_entities` - Shows current state of all entities for active release
+   - `v_active_translations` - Convenience view for translation content
+   - Views handle complex inheritance from deployed releases
+
+4. **Deploy Sequence**: Ensures consistent ordering
+   - Monotonically increasing sequence assigned at deploy time
+   - Prevents race conditions and ensures deterministic state
+   - Enables efficient rollback to any previous deploy point
+
+#### Implementation Details
+
+**Release Context Middleware** (`apps/api/src/plugins/app/releases/release-context.ts`):
+```typescript
+// Sets release context for each request
+fastify.addHook('onRequest', async (request) => {
+  const releaseId = request.headers['x-cms-release'] || await getLatestDeployed()
+  await db.execute(sql`SELECT set_active_release(${releaseId})`)
+  request.releaseContext = { releaseId }
+})
+```
+
+**Database Functions**:
+- `get_active_release()` - Returns current release from session
+- `set_active_release(id)` - Sets release context in session
+- `get_latest_deployed_release()` - Finds most recent deployed release
+- `calculate_release_diff()` - Computes changes between releases
+
+**Custom Migrations**: The system uses a custom SQL migration system for:
+- Database functions and stored procedures
+- Complex views with business logic
+- Permission seeding and RBAC setup
+- Located in `packages/db/custom-migrations/`
 
 ### Authentication Flow
 

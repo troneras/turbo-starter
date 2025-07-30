@@ -10,7 +10,7 @@ This project is the **single source of truth** for all product content, translat
 
 We are solving problems typical CMSs and TMSs can’t:
 
-- **Atomic Content Releases:** Bundle translations, content entries, SEO, and assets—deploy or rollback together.
+- **Atomic Content Releases:** Bundle translations, content entries, SEO, and assets—deploy or rollback together using Git-like branching.
 - **Multi-brand Personalization:** Fine-grained overrides for brands, jurisdictions, and features.
 - **Workflow & Audit:** Structured workflow (draft → review → QA → deploy), deep audit logs, and compliance.
 - **Feature Flags & Dark Launch:** Decouple code and content, test new features and content safely.
@@ -131,11 +131,30 @@ apps/admin/
 ## 🧩 **Key Features**
 
 - **Multi-brand & Multilingual**: Override content and translations at any level (global/brand/jurisdiction).
-- **Content & Translation Releases**: Atomic, auditable, and roll-back-able.
+- **Content & Translation Releases**: Atomic, auditable, and roll-back-able using Git-like branching system.
 - **Feature Flags**: Control content visibility for dark launches or staged rollouts.
 - **Workflow**: Draft, review, QA, deploy, rollback—every step logged and permissioned.
 - **AI-Ready**: Easy integration for AI-powered translation and glossary bootstrapping.
 - **Extensible**: Designed to add CMS content, SEO, asset management, and new features as you scale.
+
+### 🚀 Release Management System
+
+The platform implements a sophisticated **Git-like branching model** for content management:
+
+- **Edition-Based Design**: Every change is made within a "release" (similar to a Git branch)
+- **Atomic Deployments**: Deploy all changes in a release together, or none at all
+- **Instant Rollback**: Switch back to any previously deployed release instantly
+- **Release Context**: View and edit content within any open or deployed release
+- **Deploy Sequence**: Monotonic ordering ensures consistent deployment history
+- **Zero-Downtime**: Session-based release switching with PostgreSQL session variables
+
+#### How It Works:
+
+1. **Create a Release**: Start a new release based on the current production state
+2. **Make Changes**: All content edits are versioned within that release
+3. **Preview & Test**: View the release in isolation before deployment
+4. **Deploy**: Atomically deploy all changes to production
+5. **Rollback**: Instantly revert to any previous release if needed
 
 ---
 

@@ -10,7 +10,9 @@ declare module 'fastify' {
     interface FastifyInstance {
         auth: ReturnType<typeof authPlugin>,
         authenticate: (request: FastifyRequest) => Promise<void>,
-        requireRole: (requiredRole: string) => (request: FastifyRequest) => Promise<void>
+        requireRole: (requiredRole: string) => (request: FastifyRequest) => Promise<void>,
+        requirePermission: (requiredPermission: string) => (request: FastifyRequest) => Promise<void>,
+        requireAnyRole: (roles: string[]) => (request: FastifyRequest) => Promise<void>
     }
 }
 
@@ -35,21 +37,21 @@ export function authPlugin(fastify: FastifyInstance) {
         // Validate test mode JWT token
         async validateTestToken(token: string): Promise<AuthUser | null> {
             if (!isTestMode) return null
-            
+
             // Test tokens start with 'mock-'
             if (!token.startsWith('mock-')) return null
-            
+
             try {
                 // For test mode, decode the user data from localStorage
                 // The frontend stores user data when using test auth
                 // Here we create a synthetic user based on the token pattern
-                
+
                 let testUser: AuthUser
-                
+
                 if (token === 'mock-admin-jwt-token') {
                     testUser = {
                         user: {
-                            id: 'admin-test-123',
+                            id: '11111111-1111-1111-1111-111111111111',
                             email: 'admin@example.com',
                             name: 'Admin User'
                         },
@@ -57,14 +59,17 @@ export function authPlugin(fastify: FastifyInstance) {
                         permissions: [
                             'users:read', 'users:create', 'users:update', 'users:delete',
                             'brands:read', 'brands:create', 'brands:update', 'brands:delete',
-                            'translations:read', 'translations:create', 'translations:update', 
-                            'translations:delete', 'translations:publish'
+                            'translations:read', 'translations:create', 'translations:update',
+                            'translations:delete', 'translations:publish',
+                            'releases:create', 'releases:read', 'releases:update', 'releases:close',
+                            'releases:deploy', 'releases:rollback', 'releases:delete',
+                            'releases:preview', 'releases:diff'
                         ]
                     }
                 } else if (token === 'mock-editor-jwt-token') {
                     testUser = {
                         user: {
-                            id: 'editor-test-123',
+                            id: '22222222-2222-2222-2222-222222222222',
                             email: 'editor@example.com',
                             name: 'Editor User'
                         },
@@ -72,13 +77,15 @@ export function authPlugin(fastify: FastifyInstance) {
                         permissions: [
                             'users:read',
                             'brands:read',
-                            'translations:read', 'translations:create', 'translations:update'
+                            'translations:read', 'translations:create', 'translations:update',
+                            'releases:create', 'releases:read', 'releases:update',
+                            'releases:close', 'releases:preview', 'releases:diff'
                         ]
                     }
                 } else if (token === 'mock-user-jwt-token') {
                     testUser = {
                         user: {
-                            id: 'user-test-123',
+                            id: '33333333-3333-3333-3333-333333333333',
                             email: 'user@example.com',
                             name: 'Basic User'
                         },
@@ -100,8 +107,13 @@ export function authPlugin(fastify: FastifyInstance) {
                 } else {
                     return null
                 }
-                
-                fastify.log.warn({ token, user: testUser.user.email }, 'Test mode authentication used')
+
+                fastify.log.warn({
+                    token,
+                    user: testUser.user.email,
+                    roles: testUser.roles,
+                    permissionsCount: testUser.permissions.length
+                }, 'Test mode authentication used')
                 return testUser
             } catch (error) {
                 fastify.log.error({ error, token }, 'Failed to validate test token')
@@ -109,7 +121,7 @@ export function authPlugin(fastify: FastifyInstance) {
             }
         },
 
-        
+
         // Determine role for new user (admin bootstrap logic)
         async determineNewUserRole(): Promise<string> {
             return await fastify.db.transaction(async (tx) => {
@@ -120,9 +132,9 @@ export function authPlugin(fastify: FastifyInstance) {
                     .innerJoin(userRoles, eq(users.id, userRoles.userId))
                     .innerJoin(roles, eq(userRoles.roleId, roles.id))
                     .where(eq(roles.name, 'admin'))
-                
+
                 const currentAdminCount = Number(adminCount[0]?.count || 0)
-                
+
                 // First 10 users get admin role, rest get user role
                 return currentAdminCount < 10 ? 'admin' : 'user'
             })
@@ -131,7 +143,7 @@ export function authPlugin(fastify: FastifyInstance) {
         // Log audit event for user management actions
         async logAuditEvent(targetUserId: string, performedBy: string | null, action: string, oldValue: any = null, newValue: any = null, reason: string | null = null, isAutomatic: boolean = false) {
             if (!performedBy) return // Skip logging for system actions without actor
-            
+
             await fastify.db
                 .insert(userAuditLogs)
                 .values({
@@ -158,13 +170,13 @@ export function authPlugin(fastify: FastifyInstance) {
                     .from(users)
                     .where(eq(users.email, decoded.email))
                     .limit(1)
-                
+
                 let user = existingUsers[0]
 
                 if (!user) {
                     // Determine role for new user (admin bootstrap logic)
                     const assignedRoleName = await this.determineNewUserRole()
-                    
+
                     // Create new user from Azure AD
                     const createdUsers = await fastify.db
                         .insert(users)
@@ -177,7 +189,7 @@ export function authPlugin(fastify: FastifyInstance) {
                             status: 'active'
                         })
                         .returning()
-                    
+
                     user = createdUsers[0]
 
                     if (!user) {
@@ -190,7 +202,7 @@ export function authPlugin(fastify: FastifyInstance) {
                         .from(roles)
                         .where(eq(roles.name, assignedRoleName))
                         .limit(1)
-                    
+
                     const assignedRole = roleResults[0]
 
                     if (assignedRole) {
@@ -200,7 +212,7 @@ export function authPlugin(fastify: FastifyInstance) {
                                 userId: user.id,
                                 roleId: assignedRole.id
                             })
-                        
+
                         // Log audit event for automatic role assignment
                         await this.logAuditEvent(
                             user.id,
@@ -269,7 +281,7 @@ export function authPlugin(fastify: FastifyInstance) {
                     .from(serviceTokens)
                     .where(eq(serviceTokens.token_hash, tokenHash))
                     .limit(1)
-                
+
                 const serviceToken = serviceTokenResults[0]
 
                 if (!serviceToken) {
@@ -339,9 +351,9 @@ export default fp(async function (fastify: FastifyInstance) {
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
                 throw fastify.httpErrors.unauthorized('Missing or invalid authorization header')
             }
-            
+
             const token = authHeader.substring(7) // Remove 'Bearer ' prefix
-            
+
             // Check if this is a test token first
             if (token.startsWith('mock-')) {
                 const testAuth = await fastify.auth.validateTestToken(token)
@@ -357,7 +369,7 @@ export default fp(async function (fastify: FastifyInstance) {
                     return
                 }
             }
-            
+
             // Normal JWT verification
             const decoded = await request.jwtVerify()
             request.user = decoded
@@ -374,8 +386,38 @@ export default fp(async function (fastify: FastifyInstance) {
         return async function (request: any) {
             const user = request.user
 
+            // Debug logging for test environment
+            if (process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test') {
+                fastify.log.debug({
+                    requiredRole,
+                    user: user ? { sub: user.sub, roles: user.roles } : null
+                }, 'Role check in requireRole')
+            }
+
             if (!user || !user.roles || !user.roles.includes(requiredRole)) {
                 throw fastify.httpErrors.forbidden('Forbidden')
+            }
+        }
+    })
+
+    // Permission-based access control decorator
+    fastify.decorate('requirePermission', function (requiredPermission: string) {
+        return async function (request: any) {
+            const user = request.user
+
+            if (!user || !user.permissions || !user.permissions.includes(requiredPermission)) {
+                throw fastify.httpErrors.forbidden('Forbidden - missing required permission')
+            }
+        }
+    })
+
+    // Multiple role check decorator (any of the roles)
+    fastify.decorate('requireAnyRole', function (roles: string[]) {
+        return async function (request: any) {
+            const user = request.user
+
+            if (!user || !user.roles || !roles.some(role => user.roles.includes(role))) {
+                throw fastify.httpErrors.forbidden('Forbidden - missing required role')
             }
         }
     })
