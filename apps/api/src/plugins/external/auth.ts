@@ -51,7 +51,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 if (token === 'mock-admin-jwt-token') {
                     testUser = {
                         user: {
-                            id: '11111111-1111-1111-1111-111111111111',
+                            id: '1',
                             email: 'admin@example.com',
                             name: 'Admin User'
                         },
@@ -69,7 +69,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 } else if (token === 'mock-editor-jwt-token') {
                     testUser = {
                         user: {
-                            id: '22222222-2222-2222-2222-222222222222',
+                            id: '2',
                             email: 'editor@example.com',
                             name: 'Editor User'
                         },
@@ -85,7 +85,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 } else if (token === 'mock-user-jwt-token') {
                     testUser = {
                         user: {
-                            id: '33333333-3333-3333-3333-333333333333',
+                            id: '3',
                             email: 'user@example.com',
                             name: 'Basic User'
                         },

@@ -1,0 +1,265 @@
+import { Type } from "@sinclair/typebox"
+
+// Translation status enum
+export const TranslationStatus = Type.Union([
+  Type.Literal("DRAFT"),
+  Type.Literal("PENDING"),
+  Type.Literal("APPROVED"),
+], {
+  description: "Translation approval status"
+})
+
+// Translation key schema
+export const TranslationKeySchema = Type.Object({
+  id: Type.Number({ description: "Entity ID of the translation key" }),
+  fullKey: Type.String({ 
+    pattern: "^[a-z0-9_.]+$",
+    description: "Dotted path key (e.g., checkout.button.confirm)" 
+  }),
+  description: Type.Union([Type.String(), Type.Null()], { 
+    description: "Description of the translation key for editors" 
+  }),
+  createdBy: Type.String({ format: "uuid", description: "User who created the key" }),
+  createdAt: Type.String({ format: "date-time", description: "Creation timestamp" }),
+}, {
+  description: "Translation key entity"
+})
+
+// Translation variant schema
+export const TranslationVariantSchema = Type.Object({
+  id: Type.Number({ description: "Entity ID of the translation" }),
+  keyId: Type.Number({ description: "ID of the parent translation key" }),
+  fullKey: Type.String({ description: "Copy of the key for easier queries" }),
+  locale: Type.String({ 
+    pattern: "^[a-z]{2}-[A-Z]{2}$",
+    description: "Locale code (e.g., en-US)" 
+  }),
+  brandId: Type.Union([Type.Number(), Type.Null()], { 
+    description: "Brand ID for brand-specific override (null = generic)" 
+  }),
+  value: Type.String({ 
+    maxLength: 1024,
+    description: "The translated text" 
+  }),
+  status: TranslationStatus,
+  metadata: Type.Optional(Type.Object({
+    maxLength: Type.Optional(Type.Number()),
+    pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
+    comments: Type.Optional(Type.String()),
+  }, { description: "Additional metadata for the translation" })),
+  createdBy: Type.String({ format: "uuid", description: "User who created the translation" }),
+  createdAt: Type.String({ format: "date-time", description: "Creation timestamp" }),
+  approvedBy: Type.Union([Type.String({ format: "uuid" }), Type.Null()], { 
+    description: "User who approved the translation" 
+  }),
+  approvedAt: Type.Union([Type.String({ format: "date-time" }), Type.Null()], { 
+    description: "Approval timestamp" 
+  }),
+}, {
+  description: "Translation variant for a specific locale and optional brand"
+})
+
+
+// Request schemas
+export const CreateTranslationKeyRequestSchema = Type.Object({
+  fullKey: Type.String({ 
+    pattern: "^[a-z0-9_.]+$",
+    description: "Dotted path key" 
+  }),
+  description: Type.Optional(Type.String({ description: "Key description" })),
+}, {
+  additionalProperties: false,
+  description: "Request to create a new translation key"
+})
+
+export const UpdateTranslationKeyRequestSchema = Type.Object({
+  description: Type.Optional(Type.String({ description: "Updated description" })),
+}, {
+  additionalProperties: false,
+  description: "Request to update a translation key"
+})
+
+export const CreateTranslationVariantRequestSchema = Type.Object({
+  fullKey: Type.String({ 
+    pattern: "^[a-z0-9_.]+$",
+    description: "Translation key to create variant for" 
+  }),
+  locale: Type.String({ 
+    pattern: "^[a-z]{2}-[A-Z]{2}$",
+    description: "Locale code (e.g., en-US)" 
+  }),
+  brandId: Type.Optional(Type.Number({ description: "Brand ID for brand-specific translation" })),
+  value: Type.String({ 
+    maxLength: 1024,
+    description: "Translation text" 
+  }),
+  status: Type.Optional(TranslationStatus),
+}, {
+  additionalProperties: false,
+  description: "Request to create a new translation variant"
+})
+
+export const UpdateTranslationVariantRequestSchema = Type.Object({
+  value: Type.String({ 
+    maxLength: 1024,
+    description: "Updated translation text" 
+  }),
+  status: Type.Optional(TranslationStatus),
+}, {
+  additionalProperties: false,
+  description: "Request to update a translation variant"
+})
+
+export const CreateTranslationRequestSchema = Type.Object({
+  keyId: Type.Number({ description: "ID of the translation key" }),
+  locale: Type.String({ 
+    pattern: "^[a-z]{2}-[A-Z]{2}$",
+    description: "Locale code" 
+  }),
+  brandId: Type.Optional(Type.Number({ description: "Brand ID for override" })),
+  value: Type.String({ 
+    maxLength: 1024,
+    description: "Translation text" 
+  }),
+  status: Type.Optional(TranslationStatus),
+  metadata: Type.Optional(Type.Object({
+    maxLength: Type.Optional(Type.Number()),
+    pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
+    comments: Type.Optional(Type.String()),
+  })),
+}, {
+  additionalProperties: false,
+  description: "Request to create a new translation"
+})
+
+export const UpdateTranslationRequestSchema = Type.Object({
+  value: Type.Optional(Type.String({ 
+    maxLength: 1024,
+    description: "Updated translation text" 
+  })),
+  status: Type.Optional(TranslationStatus),
+  metadata: Type.Optional(Type.Object({
+    maxLength: Type.Optional(Type.Number()),
+    pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
+    comments: Type.Optional(Type.String()),
+  })),
+}, {
+  additionalProperties: false,
+  description: "Request to update a translation"
+})
+
+export const UpdateTranslationStatusRequestSchema = Type.Object({
+  status: TranslationStatus,
+}, {
+  additionalProperties: false,
+  description: "Request to update translation status"
+})
+
+// Query parameter schemas
+export const TranslationKeyQuerySchema = Type.Object({
+  parent: Type.Optional(Type.String({ description: "Parent path for tree navigation" })),
+  search: Type.Optional(Type.String({ description: "Search term for keys" })),
+  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, default: 50 })),
+  offset: Type.Optional(Type.Number({ minimum: 0, default: 0 })),
+}, {
+  additionalProperties: false,
+  description: "Query parameters for listing translation keys"
+})
+
+export const TranslationQuerySchema = Type.Object({
+  keyId: Type.Optional(Type.Number({ description: "Filter by translation key ID" })),
+  locale: Type.Optional(Type.String({ description: "Filter by locale" })),
+  brandId: Type.Optional(Type.Number({ description: "Filter by brand (0 for generic)" })),
+  status: Type.Optional(TranslationStatus),
+  search: Type.Optional(Type.String({ description: "Search in translation values" })),
+  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, default: 50 })),
+  offset: Type.Optional(Type.Number({ minimum: 0, default: 0 })),
+}, {
+  additionalProperties: false,
+  description: "Query parameters for listing translations"
+})
+
+// Tree node schema for hierarchical key display
+export const TranslationKeyTreeNodeSchema = Type.Object({
+  segment: Type.String({ description: "Key segment at this level" }),
+  fullPath: Type.String({ description: "Full path to this node" }),
+  isFolder: Type.Boolean({ description: "Whether this node has children" }),
+  childCount: Type.Number({ description: "Number of child keys" })
+}, {
+  description: "Tree node for hierarchical key navigation"
+})
+
+// Response schemas
+export const TranslationKeyListResponseSchema = Type.Object({
+  keys: Type.Array(TranslationKeySchema),
+  tree: Type.Optional(Type.Array(TranslationKeyTreeNodeSchema)),
+  total: Type.Number(),
+  limit: Type.Number(),
+  offset: Type.Number(),
+}, {
+  description: "Paginated list of translation keys"
+})
+
+export const TranslationListResponseSchema = Type.Object({
+  translations: Type.Array(TranslationVariantSchema),
+  total: Type.Number(),
+  limit: Type.Number(),
+  offset: Type.Number(),
+}, {
+  description: "Paginated list of translations"
+})
+
+export const TranslationStatsResponseSchema = Type.Object({
+  totalKeys: Type.Number(),
+  totalTranslations: Type.Number(),
+  draftCount: Type.Number(),
+  pendingCount: Type.Number(),
+  approvedCount: Type.Number(),
+  localeCoverage: Type.Record(Type.String(), Type.Object({
+    total: Type.Number(),
+    approved: Type.Number(),
+  })),
+}, {
+  description: "Translation statistics"
+})
+
+// Import/Export schemas
+export const TranslationImportRequestSchema = Type.Object({
+  format: Type.Union([Type.Literal("json"), Type.Literal("csv")]),
+  data: Type.String({ description: "Base64 encoded file content" }),
+  brandId: Type.Optional(Type.Number({ description: "Import for specific brand" })),
+  overwrite: Type.Optional(Type.Boolean({ default: false, description: "Overwrite existing translations" })),
+}, {
+  additionalProperties: false,
+  description: "Request to import translations"
+})
+
+export const TranslationExportQuerySchema = Type.Object({
+  format: Type.Union([Type.Literal("json"), Type.Literal("csv")]),
+  brandId: Type.Optional(Type.Number({ description: "Export specific brand (0 for generic)" })),
+  locale: Type.Optional(Type.String({ description: "Export specific locale" })),
+  status: Type.Optional(TranslationStatus),
+  keysOnly: Type.Optional(Type.Boolean({ default: false, description: "Export only keys without translations" })),
+}, {
+  additionalProperties: false,
+  description: "Query parameters for exporting translations"
+})
+
+// Runtime lookup schema
+export const TranslationLookupRequestSchema = Type.Object({
+  key: Type.String({ description: "Translation key" }),
+  locale: Type.String({ description: "Locale code" }),
+  brandId: Type.Optional(Type.Number({ description: "Brand ID for override" })),
+}, {
+  additionalProperties: false,
+  description: "Request to lookup a single translation"
+})
+
+export const TranslationLookupResponseSchema = Type.Object({
+  key: Type.String(),
+  locale: Type.String(),
+  value: Type.Union([Type.String(), Type.Null()]),
+  brandSpecific: Type.Boolean(),
+}, {
+  description: "Translation lookup result"
+})

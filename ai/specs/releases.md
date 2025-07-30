@@ -284,3 +284,6 @@ PostgreSQL with partitioning and zstd TOAST comfortably handles this on a single
 ---
 
 _End of document_
+
+
+After finishing that task, we continued with 
