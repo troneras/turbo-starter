@@ -1,18 +1,24 @@
 import { it, describe, expect, afterEach, beforeEach } from 'bun:test'
 import { build } from '../../../helpers/build-app'
+import { createTestUsers, cleanupTestUsers } from '../../../helpers/test-users'
 import { users, roles, userRoles } from '@cms/db/schema'
 import { eq } from 'drizzle-orm'
 
 describe('Users API', () => {
     let app: any
+    let testUsers: any
 
     beforeEach(async () => {
         app = await build()
         await app.ready()
+        
+        // Create test users with specific roles
+        testUsers = await createTestUsers(app)
     })
 
     afterEach(async () => {
         if (app) {
+            await cleanupTestUsers(app)
             await app.close()
         }
     })
@@ -105,81 +111,13 @@ describe('Users API', () => {
     })
 
     describe('GET /api/users', () => {
-        let adminToken: string
-        let userToken: string
-
-        beforeEach(async () => {
-            const timestamp = Date.now()
-            
-            // Ensure admin role exists first
-            let adminRole
-            try {
-                [adminRole] = await app.db.insert(roles).values({
-                    name: 'admin'
-                }).returning()
-            } catch (error) {
-                // Role already exists, fetch it
-                const existingRole = await app.db.select().from(roles)
-                    .where(eq(roles.name, 'admin')).limit(1)
-                adminRole = existingRole[0]
-            }
-
-            // Create admin user directly in database with role assigned
-            const adminEmail = `admin-${timestamp}@example.com`
-            const [adminUser] = await app.db.insert(users).values({
-                email: adminEmail,
-                name: 'Admin User',
-                azure_ad_oid: 'admin-oid',
-                azure_ad_tid: 'admin-tid'
-            }).returning()
-
-            // Assign admin role
-            await app.db.insert(userRoles).values({
-                userId: adminUser.id,
-                roleId: adminRole.id
-            })
-
-            // Now login to get JWT with admin role
-            const adminAzureData = {
-                email: adminEmail,
-                name: 'Admin User',
-                oid: 'admin-oid',
-                tid: 'admin-tid'
-            }
-            const adminAzureToken = Buffer.from(JSON.stringify(adminAzureData)).toString('base64')
-
-            const adminLoginRes = await app.inject({
-                method: 'POST',
-                url: '/api/auth/login',
-                payload: { azure_token: adminAzureToken }
-            })
-
-            adminToken = JSON.parse(adminLoginRes.payload).jwt
-
-            // Create regular user
-            const userAzureData = {
-                email: `regular-user-${timestamp}@example.com`,
-                name: 'Regular User',
-                oid: 'user-oid',
-                tid: 'user-tid'
-            }
-            const userAzureToken = Buffer.from(JSON.stringify(userAzureData)).toString('base64')
-
-            const userLoginRes = await app.inject({
-                method: 'POST',
-                url: '/api/auth/login',
-                payload: { azure_token: userAzureToken }
-            })
-
-            userToken = JSON.parse(userLoginRes.payload).jwt
-        })
 
         it('should list users successfully with admin token', async () => {
             const res = await app.inject({
                 method: 'GET',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -213,7 +151,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users?page=2&pageSize=5',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -237,7 +175,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: `/api/users?search=Searchable`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -251,7 +189,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users?role=admin',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -268,7 +206,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users?status=active',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -285,7 +223,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users?search=Admin&role=admin&status=active',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -299,7 +237,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -315,7 +253,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 }
             })
 
@@ -340,7 +278,7 @@ describe('Users API', () => {
                 method: 'GET',
                 url: '/api/users?page=invalid&pageSize=notanumber',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -440,7 +378,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: newUser
             })
@@ -465,7 +403,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: newUser
             })
@@ -485,7 +423,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: invalidUser
             })
@@ -504,7 +442,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: invalidUser
             })
@@ -524,7 +462,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: invalidUser
             })
@@ -546,7 +484,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: userData
             })
@@ -558,7 +496,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: userData
             })
@@ -580,7 +518,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: invalidUser
             })
@@ -600,7 +538,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users',
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 },
                 payload: newUser
             })
@@ -719,7 +657,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: updates
             })
@@ -741,7 +679,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: updates
             })
@@ -769,7 +707,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: updates
             })
@@ -790,7 +728,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${nonExistentId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: updates
             })
@@ -818,7 +756,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: updates
             })
@@ -837,7 +775,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 },
                 payload: updates
             })
@@ -872,7 +810,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: updates
             })
@@ -970,7 +908,7 @@ describe('Users API', () => {
                 method: 'DELETE',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -988,7 +926,7 @@ describe('Users API', () => {
                 method: 'DELETE',
                 url: `/api/users/${adminUserId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -1005,7 +943,7 @@ describe('Users API', () => {
                 method: 'DELETE',
                 url: `/api/users/${nonExistentId}`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -1020,7 +958,7 @@ describe('Users API', () => {
                 method: 'DELETE',
                 url: `/api/users/${testUserId}`,
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 }
             })
 
@@ -1045,7 +983,7 @@ describe('Users API', () => {
                 method: 'DELETE',
                 url: '/api/users/invalid-uuid',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 }
             })
 
@@ -1144,7 +1082,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}/status`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: { status: 'inactive' }
             })
@@ -1161,7 +1099,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${adminUserId}/status`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: { status: 'inactive' }
             })
@@ -1178,7 +1116,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${nonExistentId}/status`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: { status: 'inactive' }
             })
@@ -1191,7 +1129,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}/status`,
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 },
                 payload: { status: 'inactive' }
             })
@@ -1204,7 +1142,7 @@ describe('Users API', () => {
                 method: 'PATCH',
                 url: `/api/users/${testUserId}/status`,
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: { status: 'invalid-status' }
             })
@@ -1310,7 +1248,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-assign-role',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds: testUserIds.slice(0, 2),
@@ -1336,7 +1274,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-assign-role',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds,
@@ -1358,7 +1296,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-assign-role',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds: testUserIds.slice(0, 2),
@@ -1379,7 +1317,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-assign-role',
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 },
                 payload: {
                     userIds: testUserIds.slice(0, 1),
@@ -1395,7 +1333,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-assign-role',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds: [], // Empty array should fail validation
@@ -1499,7 +1437,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-deactivate',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds: testUserIds.slice(0, 2),
@@ -1523,7 +1461,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-deactivate',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds,
@@ -1548,7 +1486,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-deactivate',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds,
@@ -1570,7 +1508,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-deactivate',
                 headers: {
-                    authorization: `Bearer ${userToken}`
+                    authorization: `Bearer ${testUsers.user.token}`
                 },
                 payload: {
                     userIds: testUserIds.slice(0, 1),
@@ -1586,7 +1524,7 @@ describe('Users API', () => {
                 method: 'POST',
                 url: '/api/users/bulk-deactivate',
                 headers: {
-                    authorization: `Bearer ${adminToken}`
+                    authorization: `Bearer ${testUsers.admin.token}`
                 },
                 payload: {
                     userIds: [] // Empty array should fail validation

@@ -40,6 +40,7 @@ export async function cleanDatabase(): Promise<void> {
     // Start with dependent tables first
     const orderedTables = [
         'user_audit_logs',    // References users
+        'releases',
         'role_permissions',   // Junction table
         'user_roles',        // Junction table 
         'service_tokens',    // References users
@@ -68,23 +69,51 @@ export async function resetDatabase(): Promise<void> {
 export async function seedTestData(): Promise<void> {
     const db = getTestDb()
 
-    // Seed basic test data that most tests will need
-    // This is just an example - adjust based on your schema
+    // Seed essential permissions and roles for tests
+    try {
+        // Create essential permissions used in tests
+        const testPermissions = [
+            { name: 'users:read', description: 'Read users', resource: 'users', action: 'read', category: 'users' },
+            { name: 'users:create', description: 'Create users', resource: 'users', action: 'create', category: 'users' },
+            { name: 'users:update', description: 'Update users', resource: 'users', action: 'update', category: 'users' },
+            { name: 'users:delete', description: 'Delete users', resource: 'users', action: 'delete', category: 'users' },
+            { name: 'translations:read', description: 'Read translations', resource: 'translations', action: 'read', category: 'content' },
+            { name: 'translations:write', description: 'Write translations', resource: 'translations', action: 'write', category: 'content' },
+            { name: 'translations:create', description: 'Create translations', resource: 'translations', action: 'create', category: 'content' },
+            { name: 'translations:update', description: 'Update translations', resource: 'translations', action: 'update', category: 'content' },
+            { name: 'translations:delete', description: 'Delete translations', resource: 'translations', action: 'delete', category: 'content' },
+            { name: 'translations:publish', description: 'Publish translations', resource: 'translations', action: 'publish', category: 'content' },
+            { name: 'releases:create', description: 'Create releases', resource: 'releases', action: 'create', category: 'releases' },
+            { name: 'releases:read', description: 'Read releases', resource: 'releases', action: 'read', category: 'releases' },
+            { name: 'releases:update', description: 'Update releases', resource: 'releases', action: 'update', category: 'releases' },
+            { name: 'releases:close', description: 'Close releases', resource: 'releases', action: 'close', category: 'releases' },
+            { name: 'releases:deploy', description: 'Deploy releases', resource: 'releases', action: 'deploy', category: 'releases' },
+            { name: 'releases:rollback', description: 'Rollback releases', resource: 'releases', action: 'rollback', category: 'releases' },
+            { name: 'releases:delete', description: 'Delete releases', resource: 'releases', action: 'delete', category: 'releases' },
+            { name: 'releases:preview', description: 'Preview releases', resource: 'releases', action: 'preview', category: 'releases' },
+            { name: 'releases:diff', description: 'Diff releases', resource: 'releases', action: 'diff', category: 'releases' },
+            { name: 'brands:read', description: 'Read brands', resource: 'brands', action: 'read', category: 'brands' },
+            { name: 'brands:create', description: 'Create brands', resource: 'brands', action: 'create', category: 'brands' },
+            { name: 'brands:update', description: 'Update brands', resource: 'brands', action: 'update', category: 'brands' },
+            { name: 'brands:delete', description: 'Delete brands', resource: 'brands', action: 'delete', category: 'brands' }
+        ]
 
-    // Example: Create default roles
-    // await db.insert(schema.roles).values([
-    //     { name: 'admin' },
-    //     { name: 'editor' },
-    //     { name: 'user' }
-    // ]).onConflictDoNothing()
+        await db.insert(schema.permissions).values(testPermissions).onConflictDoNothing()
 
-    // Example: Create default permissions
-    // await db.insert(schema.permissions).values([
-    //     { name: 'users:read' },
-    //     { name: 'users:write' },
-    //     { name: 'brands:read' },
-    //     { name: 'brands:write' }
-    // ]).onConflictDoNothing()
+        // Create essential roles for tests
+        const testRoles = [
+            { name: 'admin', description: 'Administrator role' },
+            { name: 'editor', description: 'Editor role' },
+            { name: 'user', description: 'Basic user role' },
+            { name: 'service', description: 'Service role' }
+        ]
+
+        await db.insert(schema.roles).values(testRoles).onConflictDoNothing()
+
+    } catch (error) {
+        // Ignore seeding errors in tests - some tests may run with empty DB
+        console.warn('Test data seeding error (ignored):', error)
+    }
 }
 
 // Helper for tests that need a clean database before each test

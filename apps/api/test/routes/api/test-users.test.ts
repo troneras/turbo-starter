@@ -26,10 +26,10 @@ describe("Test Users API - GET /api/test-users", () => {
 
     // Create test permissions
     const testPermissions = await app.db.insert(permissions).values([
-      { name: 'users:read', description: 'Read users', resource: 'users', action: 'read' },
-      { name: 'users:create', description: 'Create users', resource: 'users', action: 'create' },
-      { name: 'translations:read', description: 'Read translations', resource: 'translations', action: 'read' },
-      { name: 'translations:write', description: 'Write translations', resource: 'translations', action: 'write' }
+      { name: 'users:read', description: 'Read users', resource: 'users', action: 'read', category: 'users' },
+      { name: 'users:create', description: 'Create users', resource: 'users', action: 'create', category: 'users' },
+      { name: 'translations:read', description: 'Read translations', resource: 'translations', action: 'read', category: 'content' },
+      { name: 'translations:write', description: 'Write translations', resource: 'translations', action: 'write', category: 'content' }
     ]).returning();
 
     // Assign permissions to roles
