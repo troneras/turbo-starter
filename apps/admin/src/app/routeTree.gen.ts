@@ -15,6 +15,7 @@ import { Route as RolesRouteImport } from './routes/roles'
 import { Route as ReleasesRouteImport } from './routes/releases'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LanguagesRouteImport } from './routes/languages'
+import { Route as KeysRouteImport } from './routes/keys'
 import { Route as JurisdictionsRouteImport } from './routes/jurisdictions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BrandsRouteImport } from './routes/brands'
@@ -50,6 +51,11 @@ const LanguagesRoute = LanguagesRouteImport.update({
   path: '/languages',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KeysRoute = KeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JurisdictionsRoute = JurisdictionsRouteImport.update({
   id: '/jurisdictions',
   path: '/jurisdictions',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
   '/jurisdictions': typeof JurisdictionsRoute
+  '/keys': typeof KeysRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
   '/jurisdictions': typeof JurisdictionsRoute
+  '/keys': typeof KeysRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
   '/jurisdictions': typeof JurisdictionsRoute
+  '/keys': typeof KeysRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/brands'
     | '/dashboard'
     | '/jurisdictions'
+    | '/keys'
     | '/languages'
     | '/login'
     | '/releases'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/brands'
     | '/dashboard'
     | '/jurisdictions'
+    | '/keys'
     | '/languages'
     | '/login'
     | '/releases'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/brands'
     | '/dashboard'
     | '/jurisdictions'
+    | '/keys'
     | '/languages'
     | '/login'
     | '/releases'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   BrandsRoute: typeof BrandsRoute
   DashboardRoute: typeof DashboardRoute
   JurisdictionsRoute: typeof JurisdictionsRoute
+  KeysRoute: typeof KeysRoute
   LanguagesRoute: typeof LanguagesRoute
   LoginRoute: typeof LoginRoute
   ReleasesRoute: typeof ReleasesRoute
@@ -204,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LanguagesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/keys': {
+      id: '/keys'
+      path: '/keys'
+      fullPath: '/keys'
+      preLoaderRoute: typeof KeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jurisdictions': {
       id: '/jurisdictions'
       path: '/jurisdictions'
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   BrandsRoute: BrandsRoute,
   DashboardRoute: DashboardRoute,
   JurisdictionsRoute: JurisdictionsRoute,
+  KeysRoute: KeysRoute,
   LanguagesRoute: LanguagesRoute,
   LoginRoute: LoginRoute,
   ReleasesRoute: ReleasesRoute,

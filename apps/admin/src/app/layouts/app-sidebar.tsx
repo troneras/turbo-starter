@@ -12,7 +12,6 @@ import {
     GanttChart,
     Settings,
     Globe,
-    GitBranch,
 } from "lucide-react"
 
 import {
