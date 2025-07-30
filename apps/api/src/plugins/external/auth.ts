@@ -51,7 +51,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 if (token === 'mock-admin-jwt-token') {
                     testUser = {
                         user: {
-                            id: '1',
+                            id: '11111111-1111-1111-1111-111111111111',
                             email: 'admin@example.com',
                             name: 'Admin User'
                         },
@@ -69,7 +69,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 } else if (token === 'mock-editor-jwt-token') {
                     testUser = {
                         user: {
-                            id: '2',
+                            id: '00000000-0000-0000-0000-000000000002',
                             email: 'editor@example.com',
                             name: 'Editor User'
                         },
@@ -85,7 +85,7 @@ export function authPlugin(fastify: FastifyInstance) {
                 } else if (token === 'mock-user-jwt-token') {
                     testUser = {
                         user: {
-                            id: '3',
+                            id: '00000000-0000-0000-0000-000000000003',
                             email: 'user@example.com',
                             name: 'Basic User'
                         },
@@ -93,11 +93,13 @@ export function authPlugin(fastify: FastifyInstance) {
                         permissions: ['users:read', 'brands:read', 'translations:read']
                     }
                 } else if (token.startsWith('mock-') && token.endsWith('-jwt-token')) {
-                    // Custom test user - extract ID from token
+                    // Custom test user - extract ID from token and create UUID
                     const userId = token.replace('mock-', '').replace('-jwt-token', '')
+                    const paddedId = userId.padStart(12, '0')
+                    const testUuid = `00000000-0000-0000-0000-${paddedId}`
                     testUser = {
                         user: {
-                            id: userId,
+                            id: testUuid,
                             email: `${userId}@test.local`,
                             name: `Test User ${userId}`
                         },
@@ -386,7 +388,7 @@ export default fp(async function (fastify: FastifyInstance) {
         return async function (request: any) {
             const user = request.user
 
-            // Debug logging for test environment
+            // b for test environment
             if (process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test') {
                 fastify.log.debug({
                     requiredRole,

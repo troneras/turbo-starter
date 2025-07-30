@@ -20,6 +20,12 @@ declare module 'fastify' {
 export function translationsRepository(fastify: FastifyInstance) {
   const db = fastify.db
 
+  // Helper function to safely convert dates to ISO strings
+  const toISOString = (date: any): string => {
+    if (!date) return new Date().toISOString()
+    return date instanceof Date ? date.toISOString() : new Date(date).toISOString()
+  }
+
   return {
     /**
      * Get translation keys with tree structure
@@ -42,7 +48,7 @@ export function translationsRepository(fastify: FastifyInstance) {
         fullKey: row.full_key,
         description: row.description,
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString()
+        createdAt: toISOString(row.created_at)
       }))
     },
 
@@ -63,6 +69,11 @@ export function translationsRepository(fastify: FastifyInstance) {
       }
 
       // Create entity and version
+      const payload = {
+        full_key: data.fullKey,
+        description: data.description || null
+      }
+
       const result = await db.execute(sql`
         WITH new_entity AS (
           INSERT INTO entities (entity_type)
@@ -80,10 +91,7 @@ export function translationsRepository(fastify: FastifyInstance) {
             'translation_key',
             ${data.fullKey},
             ${data.fullKey},
-            jsonb_build_object(
-              'full_key', ${data.fullKey},
-              'description', ${data.description || null}
-            ),
+            ${JSON.stringify(payload)},
             'CREATE',
             ${userId}
           FROM new_entity e
@@ -104,7 +112,7 @@ export function translationsRepository(fastify: FastifyInstance) {
         fullKey: row.full_key,
         description: row.description,
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString()
+        createdAt: toISOString(row.created_at)
       }
     },
 
@@ -152,7 +160,7 @@ export function translationsRepository(fastify: FastifyInstance) {
         fullKey: row.full_key,
         description: row.description,
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString()
+        createdAt: toISOString(row.created_at)
       }
     },
 
@@ -240,9 +248,9 @@ export function translationsRepository(fastify: FastifyInstance) {
         value: row.value,
         status: row.status as 'DRAFT' | 'PENDING' | 'APPROVED',
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString(),
+        createdAt: toISOString(row.created_at),
         approvedBy: row.status === 'APPROVED' ? row.created_by : null,
-        approvedAt: row.status === 'APPROVED' ? row.created_at.toISOString() : null
+        approvedAt: row.status === 'APPROVED' ? toISOString(row.created_at) : null
       }))
     },
 
@@ -342,7 +350,7 @@ export function translationsRepository(fastify: FastifyInstance) {
         value: row.value,
         status: row.status as 'DRAFT' | 'PENDING' | 'APPROVED',
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString(),
+        createdAt: toISOString(row.created_at),
         approvedBy: null,
         approvedAt: null
       }
@@ -408,9 +416,9 @@ export function translationsRepository(fastify: FastifyInstance) {
         value: row.value,
         status: row.status as 'DRAFT' | 'PENDING' | 'APPROVED',
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString(),
+        createdAt: toISOString(row.created_at),
         approvedBy: row.status === 'APPROVED' ? row.created_by : null,
-        approvedAt: row.status === 'APPROVED' ? row.created_at.toISOString() : null
+        approvedAt: row.status === 'APPROVED' ? toISOString(row.created_at) : null
       }
     },
 
@@ -470,9 +478,9 @@ export function translationsRepository(fastify: FastifyInstance) {
         value: row.value,
         status: row.status as 'DRAFT' | 'PENDING' | 'APPROVED',
         createdBy: row.created_by,
-        createdAt: row.created_at.toISOString(),
+        createdAt: toISOString(row.created_at),
         approvedBy: status === 'APPROVED' ? row.created_by : null,
-        approvedAt: status === 'APPROVED' ? row.created_at.toISOString() : null
+        approvedAt: status === 'APPROVED' ? toISOString(row.created_at) : null
       }
     },
 
