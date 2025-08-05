@@ -1,5 +1,6 @@
 import { db } from './config'
 import { users, userRoles, userAuditLogs, releases, roles, permissions, rolePermissions } from './schema'
+import { DEFAULT_ROLES } from '../../apps/api/src/plugins/app/permissions/default-roles'
 
 export async function seed() {
     console.log('Seeding database...')
@@ -138,12 +139,53 @@ export async function seed() {
     const createdUsers = await db.insert(users).values(allUsers).returning()
     console.log(`Created ${createdUsers.length} users`)
 
+    // Create roles (without permissions - those are managed by the API)
+    console.log('Creating roles...')
+    const roleData = DEFAULT_ROLES.map(role => ({
+        name: role.name,
+        description: role.description,
+        created_by: '00000000-0000-0000-0000-000000000000' // System user
+    }))
+    
+    const createdRoles = await db.insert(roles).values(roleData).returning()
+    console.log(`Created ${createdRoles.length} roles`)
+
+    // Assign roles to specific test users
+    console.log('Assigning roles to users...')
+    const roleAssignments = [
+        // Admin user gets admin role
+        { 
+            userId: '11111111-1111-1111-1111-111111111111', 
+            roleId: createdRoles.find(r => r.name === 'admin')!.id 
+        },
+        // Editor user gets editor role
+        { 
+            userId: '22222222-2222-2222-2222-222222222222', 
+            roleId: createdRoles.find(r => r.name === 'editor')!.id 
+        },
+        // Basic user gets user role
+        { 
+            userId: '33333333-3333-3333-3333-333333333333', 
+            roleId: createdRoles.find(r => r.name === 'user')!.id 
+        },
+        // System user gets service role
+        { 
+            userId: '00000000-0000-0000-0000-000000000000', 
+            roleId: createdRoles.find(r => r.name === 'service')!.id 
+        }
+    ]
+
+    await db.insert(userRoles).values(roleAssignments)
+    console.log(`Assigned roles to ${roleAssignments.length} users`)
+
     console.log('\n✅ Database seeded successfully!')
     console.log('Created:')
     console.log(`  - 1 system user for automated operations`)
     console.log(`  - 3 test authentication users (admin, editor, user)`)
     console.log(`  - ${sampleUsers.length} sample users for UI development`)
-    console.log(`  - Roles and permissions will be managed automatically by the API`)
+    console.log(`  - ${createdRoles.length} system roles`)
+    console.log(`  - Role assignments for test users`)
+    console.log(`  - Permissions will be managed automatically by the API`)
     console.log(`  - Ready for development and testing!`)
 }
 
