@@ -42,11 +42,11 @@ export function CreateTranslationKeyDialog({
       return;
     }
 
-    const fullKey = parentPath ? `${parentPath}.${keyName}` : keyName;
+    const entityKey = parentPath ? `${parentPath}.${keyName}` : keyName;
 
     try {
       const result = await createMutation.mutateAsync({
-        fullKey,
+        entityKey,
         description: description || undefined,
       });
       
@@ -88,7 +88,7 @@ export function CreateTranslationKeyDialog({
             />
             {parentPath && (
               <p className="text-sm text-muted-foreground mt-1">
-                Full key: {parentPath}.{keyName || '...'}
+                Entity key: {parentPath}.{keyName || '...'}
               </p>
             )}
             {error && (

@@ -34,95 +34,113 @@ export function authPlugin(fastify: FastifyInstance) {
     const isTestMode = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test'
 
     return {
-        // Validate test mode JWT token
-        async validateTestToken(token: string): Promise<AuthUser | null> {
-            if (!isTestMode) return null
+        // Extract common logic for loading user roles and permissions
+        async loadUserRolesAndPermissions(userId: string): Promise<{ roles: string[], permissions: string[] }> {
+            const userRoleData = await fastify.db
+                .select({
+                    roleName: roles.name,
+                    permissions: permissions
+                })
+                .from(userRoles)
+                .innerJoin(roles, eq(userRoles.roleId, roles.id))
+                .leftJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
+                .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+                .where(eq(userRoles.userId, userId))
 
-            // Test tokens start with 'mock-'
-            if (!token.startsWith('mock-')) return null
+            const userRoleNames = [...new Set(userRoleData.map(r => r.roleName))]
+            const userPermissions = userRoleData
+                .filter(r => r.permissions)
+                .map(r => r.permissions!.name)
 
-            try {
-                // For test mode, decode the user data from localStorage
-                // The frontend stores user data when using test auth
-                // Here we create a synthetic user based on the token pattern
-
-                let testUser: AuthUser
-
-                if (token === 'mock-admin-jwt-token') {
-                    testUser = {
-                        user: {
-                            id: '11111111-1111-1111-1111-111111111111',
-                            email: 'admin@example.com',
-                            name: 'Admin User'
-                        },
-                        roles: ['admin', 'user'],
-                        permissions: [
-                            'users:read', 'users:create', 'users:update', 'users:delete',
-                            'brands:read', 'brands:create', 'brands:update', 'brands:delete',
-                            'translations:read', 'translations:create', 'translations:update',
-                            'translations:delete', 'translations:publish',
-                            'releases:create', 'releases:read', 'releases:update', 'releases:close',
-                            'releases:deploy', 'releases:rollback', 'releases:delete',
-                            'releases:preview', 'releases:diff'
-                        ]
-                    }
-                } else if (token === 'mock-editor-jwt-token') {
-                    testUser = {
-                        user: {
-                            id: '00000000-0000-0000-0000-000000000002',
-                            email: 'editor@example.com',
-                            name: 'Editor User'
-                        },
-                        roles: ['editor', 'user'],
-                        permissions: [
-                            'users:read',
-                            'brands:read',
-                            'translations:read', 'translations:create', 'translations:update',
-                            'releases:create', 'releases:read', 'releases:update',
-                            'releases:close', 'releases:preview', 'releases:diff'
-                        ]
-                    }
-                } else if (token === 'mock-user-jwt-token') {
-                    testUser = {
-                        user: {
-                            id: '00000000-0000-0000-0000-000000000003',
-                            email: 'user@example.com',
-                            name: 'Basic User'
-                        },
-                        roles: ['user'],
-                        permissions: ['users:read', 'brands:read', 'translations:read']
-                    }
-                } else if (token.startsWith('mock-') && token.endsWith('-jwt-token')) {
-                    // Custom test user - extract ID from token and create UUID
-                    const userId = token.replace('mock-', '').replace('-jwt-token', '')
-                    const paddedId = userId.padStart(12, '0')
-                    const testUuid = `00000000-0000-0000-0000-${paddedId}`
-                    testUser = {
-                        user: {
-                            id: testUuid,
-                            email: `${userId}@test.local`,
-                            name: `Test User ${userId}`
-                        },
-                        roles: ['user'],
-                        permissions: ['users:read']
-                    }
-                } else {
-                    return null
-                }
-
-                fastify.log.warn({
-                    token,
-                    user: testUser.user.email,
-                    roles: testUser.roles,
-                    permissionsCount: testUser.permissions.length
-                }, 'Test mode authentication used')
-                return testUser
-            } catch (error) {
-                fastify.log.error({ error, token }, 'Failed to validate test token')
-                return null
+            return {
+                roles: userRoleNames,
+                permissions: userPermissions
             }
         },
 
+        // Extract common logic for creating or updating user
+        async findOrCreateUser(userData: {
+            email: string
+            name: string
+            azure_ad_oid?: string
+            azure_ad_tid?: string
+        }): Promise<{ user: any, isNewUser: boolean }> {
+            const existingUsers = await fastify.db
+                .select()
+                .from(users)
+                .where(eq(users.email, userData.email))
+                .limit(1)
+
+            let user = existingUsers[0]
+            let isNewUser = false
+
+            if (!user) {
+                // Determine role for new user (admin bootstrap logic)
+                const assignedRoleName = await this.determineNewUserRole()
+
+                // Create new user
+                const createdUsers = await fastify.db
+                    .insert(users)
+                    .values({
+                        email: userData.email,
+                        name: userData.name,
+                        azure_ad_oid: userData.azure_ad_oid,
+                        azure_ad_tid: userData.azure_ad_tid,
+                        last_login_at: new Date(),
+                        status: 'active'
+                    })
+                    .returning()
+
+                user = createdUsers[0]
+
+                if (!user) {
+                    throw fastify.httpErrors.internalServerError('Failed to create user')
+                }
+
+                // Assign determined role (admin for first 10 users, user for rest)
+                const roleResults = await fastify.db
+                    .select()
+                    .from(roles)
+                    .where(eq(roles.name, assignedRoleName))
+                    .limit(1)
+
+                const assignedRole = roleResults[0]
+
+                if (assignedRole) {
+                    await fastify.db
+                        .insert(userRoles)
+                        .values({
+                            userId: user.id,
+                            roleId: assignedRole.id
+                        })
+
+                    // Log audit event for automatic role assignment
+                    await this.logAuditEvent(
+                        user.id,
+                        user.id, // Self-assigned on creation
+                        'role_assigned',
+                        null,
+                        { role: assignedRoleName },
+                        'Automatic role assignment on user creation',
+                        true
+                    )
+                }
+
+                isNewUser = true
+            } else {
+                // Update last login and Azure AD data
+                await fastify.db
+                    .update(users)
+                    .set({
+                        last_login_at: new Date(),
+                        azure_ad_oid: userData.azure_ad_oid,
+                        azure_ad_tid: userData.azure_ad_tid
+                    })
+                    .where(eq(users.id, user.id))
+            }
+
+            return { user, isNewUser }
+        },
 
         // Determine role for new user (admin bootstrap logic)
         async determineNewUserRole(): Promise<string> {
@@ -159,101 +177,101 @@ export function authPlugin(fastify: FastifyInstance) {
                 })
         },
 
-        // Azure AD token validation
+        // Validate test mode JWT token
+        async validateTestToken(token: string): Promise<AuthUser | null> {
+            if (!isTestMode) return null
 
+            // Test tokens start with 'mock-'
+            if (!token.startsWith('mock-')) return null
+
+            try {
+                let testUserData: { email: string; name: string; id?: string }
+
+                if (token === 'mock-admin-jwt-token') {
+                    testUserData = {
+                        id: '11111111-1111-1111-1111-111111111111',
+                        email: 'admin@example.com',
+                        name: 'Admin User'
+                    }
+                } else if (token === 'mock-editor-jwt-token') {
+                    testUserData = {
+                        id: '00000000-0000-0000-0000-000000000002',
+                        email: 'editor@example.com',
+                        name: 'Editor User'
+                    }
+                } else if (token === 'mock-user-jwt-token') {
+                    testUserData = {
+                        id: '00000000-0000-0000-0000-000000000003',
+                        email: 'user@example.com',
+                        name: 'Basic User'
+                    }
+                } else if (token.startsWith('mock-') && token.endsWith('-jwt-token')) {
+                    // Custom test user - extract ID from token and create UUID
+                    const userId = token.replace('mock-', '').replace('-jwt-token', '')
+                    const paddedId = userId.padStart(12, '0')
+                    const testUuid = `00000000-0000-0000-0000-${paddedId}`
+                    testUserData = {
+                        id: testUuid,
+                        email: `${userId}@test.local`,
+                        name: `Test User ${userId}`
+                    }
+                } else {
+                    return null
+                }
+
+                // Find or create test user in database
+                const { user, isNewUser } = await this.findOrCreateUser({
+                    email: testUserData.email,
+                    name: testUserData.name
+                })
+
+                // Load roles and permissions from database
+                const { roles, permissions } = await this.loadUserRolesAndPermissions(user.id)
+
+                const authUser: AuthUser = {
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        azure_ad_oid: user.azure_ad_oid || undefined,
+                        azure_ad_tid: user.azure_ad_tid || undefined,
+                        last_login_at: user.last_login_at || undefined
+                    },
+                    roles,
+                    permissions
+                }
+
+                fastify.log.warn({
+                    token,
+                    user: authUser.user.email,
+                    roles: authUser.roles,
+                    permissionsCount: authUser.permissions.length,
+                    isNewUser
+                }, 'Test mode authentication used')
+                
+                return authUser
+            } catch (error) {
+                fastify.log.error({ error, token }, 'Failed to validate test token')
+                return null
+            }
+        },
+
+        // Azure AD token validation
         async validateAzureToken(token: string): Promise<AuthUser> {
             try {
                 // Decode base64 token for testing
                 const decoded = JSON.parse(Buffer.from(token, 'base64').toString())
 
-                // Find or create user
-                const existingUsers = await fastify.db
-                    .select()
-                    .from(users)
-                    .where(eq(users.email, decoded.email))
-                    .limit(1)
+                // Find or create user using shared logic
+                const { user } = await this.findOrCreateUser({
+                    email: decoded.email,
+                    name: decoded.name,
+                    azure_ad_oid: decoded.oid,
+                    azure_ad_tid: decoded.tid
+                })
 
-                let user = existingUsers[0]
-
-                if (!user) {
-                    // Determine role for new user (admin bootstrap logic)
-                    const assignedRoleName = await this.determineNewUserRole()
-
-                    // Create new user from Azure AD
-                    const createdUsers = await fastify.db
-                        .insert(users)
-                        .values({
-                            email: decoded.email,
-                            name: decoded.name,
-                            azure_ad_oid: decoded.oid,
-                            azure_ad_tid: decoded.tid,
-                            last_login_at: new Date(),
-                            status: 'active'
-                        })
-                        .returning()
-
-                    user = createdUsers[0]
-
-                    if (!user) {
-                        throw fastify.httpErrors.internalServerError('Failed to create user')
-                    }
-
-                    // Assign determined role (admin for first 10 users, user for rest)
-                    const roleResults = await fastify.db
-                        .select()
-                        .from(roles)
-                        .where(eq(roles.name, assignedRoleName))
-                        .limit(1)
-
-                    const assignedRole = roleResults[0]
-
-                    if (assignedRole) {
-                        await fastify.db
-                            .insert(userRoles)
-                            .values({
-                                userId: user.id,
-                                roleId: assignedRole.id
-                            })
-
-                        // Log audit event for automatic role assignment
-                        await this.logAuditEvent(
-                            user.id,
-                            user.id, // Self-assigned on creation
-                            'role_assigned',
-                            null,
-                            { role: assignedRoleName },
-                            'Automatic role assignment on user creation',
-                            true
-                        )
-                    }
-                } else {
-                    // Update last login
-                    await fastify.db
-                        .update(users)
-                        .set({
-                            last_login_at: new Date(),
-                            azure_ad_oid: decoded.oid,
-                            azure_ad_tid: decoded.tid
-                        })
-                        .where(eq(users.id, user.id))
-                }
-
-                // Get user roles and permissions
-                const userRoleData = await fastify.db
-                    .select({
-                        roleName: roles.name,
-                        permissions: permissions
-                    })
-                    .from(userRoles)
-                    .innerJoin(roles, eq(userRoles.roleId, roles.id))
-                    .leftJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-                    .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-                    .where(eq(userRoles.userId, user.id))
-
-                const userRoleNames = [...new Set(userRoleData.map(r => r.roleName))]
-                const userPermissions = userRoleData
-                    .filter(r => r.permissions)
-                    .map(r => r.permissions!.name)
+                // Load roles and permissions using shared logic
+                const { roles, permissions } = await this.loadUserRolesAndPermissions(user.id)
 
                 return {
                     user: {
@@ -264,8 +282,8 @@ export function authPlugin(fastify: FastifyInstance) {
                         azure_ad_tid: user.azure_ad_tid || undefined,
                         last_login_at: user.last_login_at || undefined
                     },
-                    roles: userRoleNames,
-                    permissions: userPermissions
+                    roles,
+                    permissions
                 }
             } catch (error) {
                 throw fastify.httpErrors.unauthorized('Invalid Azure AD token')

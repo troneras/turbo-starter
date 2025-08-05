@@ -1,6 +1,7 @@
 import { pgTable, bigserial, text, varchar, timestamp, uuid, bigint, index, primaryKey } from 'drizzle-orm/pg-core'
 import { pgSequence } from 'drizzle-orm/pg-core'
 import { users } from './index'
+import { releaseStatusEnum } from './enums'
 
 // Deploy sequence for monotonic ordering
 export const deploySequence = pgSequence('deploy_seq')
@@ -10,10 +11,9 @@ export const releases = pgTable('releases', {
   id: bigserial('id', { mode: 'bigint' }),
   name: text('name').notNull(),
   description: text('description'),
-  status: varchar('status', { length: 20 })
+  status: releaseStatusEnum('status')
     .notNull()
-    .default('OPEN')
-    .$type<'OPEN' | 'CLOSED' | 'DEPLOYED' | 'ROLLED_BACK'>(),
+    .default('OPEN'),
   deploySeq: bigint('deploy_seq', { mode: 'bigint' }).unique(),
   createdBy: uuid('created_by')
     .references(() => users.id)

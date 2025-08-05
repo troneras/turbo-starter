@@ -26,23 +26,20 @@ test/
 
 ### Prerequisites
 
-First, set up the test database:
+Ensure the development database is set up and running:
 
 ```bash
-# Start the test database and run migrations
-bun run test:setup
+# Start the development database and run migrations
+docker-compose up -d
+bun run --filter=db db:migrate
 ```
 
-This will:
-
-1. Start the `postgres_test` container on port 5433
-2. Run database migrations on the test database
-3. Prepare it for testing
+Tests now run against the same database as development to simplify the setup.
 
 ### Running Tests
 
 ```bash
-# Run all tests (uses test database automatically)
+# Run all tests
 bun run test
 
 # Run specific test file
@@ -62,9 +59,11 @@ bun run test:integration
 
 Each test automatically gets a **clean database** before it runs. The test helpers will:
 
-1. **Clean all tables** - Remove all data from the previous test
+1. **Clean all tables** - Remove all data from the previous test (uses the same dev database)
 2. **Seed basic data** - Add any default data needed for tests
 3. **Close connections** - Properly cleanup database connections
+
+**Note**: Tests now use the same database as development but clean all data between tests.
 
 ### Manual Database Control
 
@@ -93,12 +92,6 @@ test("manual cleanup", async (t) => {
 });
 ```
 
-### Teardown
-
-```bash
-# Stop the test database when done
-bun run test:teardown
-```
 
 ## Test Implementation Status
 
@@ -165,45 +158,26 @@ bun run test:teardown
 
 ## Database Configuration
 
-### Test Database Setup
+### Database Configuration
 
-The test suite uses a **separate PostgreSQL database** to ensure complete isolation from development data:
+The test suite now uses the **same PostgreSQL database** as development, with table cleanup between tests for simplicity:
 
-- **Development DB**: `cms_platform_dev` on port 5432
-- **Test DB**: `cms_platform_test` on port 5433
+- **Database**: `cms_platform_dev` on port 5432 (shared with development)
 
 ### Environment Variables for Testing
 
 The test helpers automatically configure the environment when tests run:
 
 ```bash
-# What you set in npm scripts:
-TEST_DATABASE_URL="postgresql://dev:dev123@localhost:5433/cms_platform_test"
-
-# What the test helpers automatically set for Fastify:
-DATABASE_URL="postgresql://dev:dev123@localhost:5433/cms_platform_test"  # ← Points to test DB
+# What the test helpers automatically set:
+DATABASE_URL="<uses your existing DATABASE_URL>"  # ← Uses development DB
 JWT_SECRET="test_jwt_secret_for_testing_only"
 REDIS_URL="redis://localhost:6379"
 NODE_ENV="test"
+TEST_MODE="true"
 ```
 
-**Important**: The test helpers automatically override `DATABASE_URL` to point to the test database. This ensures that the Fastify `env.ts` plugin connects to the test database instead of your development database.
-
-### Docker Compose Services
-
-```yaml
-# Development database
-postgres:
-  ports: ["5432:5432"]
-  environment:
-    POSTGRES_DB: cms_platform_dev
-
-# Test database
-postgres_test:
-  ports: ["5433:5432"] # Note: Different host port
-  environment:
-    POSTGRES_DB: cms_platform_test
-```
+**Important**: Tests clean all tables between runs to ensure isolation while using the same database as development.
 
 ## Best Practices
 

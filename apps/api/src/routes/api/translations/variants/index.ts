@@ -12,11 +12,11 @@ import type {
 import { Type } from '@sinclair/typebox'
 
 const ParamsSchema = Type.Object({
-  id: Type.Number()
+  id: Type.String({ pattern: '^[0-9]+$' })
 })
 
 const QuerySchema = Type.Object({
-  fullKey: Type.Optional(Type.String()),
+  entityKey: Type.Optional(Type.String()),
   locale: Type.Optional(Type.String()),
   brandId: Type.Optional(Type.Number()),
   status: Type.Optional(Type.Union([
@@ -38,17 +38,17 @@ export default async function (fastify: FastifyInstance) {
         200: Type.Array(TranslationVariantSchema)
       }
     },
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
   }, async (request) => {
-    const { fullKey, locale, brandId, status } = request.query as {
-      fullKey?: string
+    const { entityKey, locale, brandId, status } = request.query as {
+      entityKey?: string
       locale?: string
       brandId?: number
       status?: 'DRAFT' | 'PENDING' | 'APPROVED'
     }
 
-    return fastify.translationsRepository.getTranslationVariants({
-      fullKey,
+    return fastify.translations.listVariants({
+      entityKey,
       locale,
       brandId,
       status
@@ -74,8 +74,15 @@ export default async function (fastify: FastifyInstance) {
     const data = request.body as CreateTranslationVariantRequest
 
     try {
-      const variant = await fastify.translationsRepository.createTranslationVariant(
-        data,
+      const variant = await fastify.translations.createVariant(
+        {
+          entityKey: data.entityKey,
+          locale: data.locale,
+          value: data.value,
+          status: data.status ?? 'DRAFT',
+          brandId: data.brandId ?? null,
+          keyId: data.keyId
+        },
         (request.user as any).sub
       )
       reply.code(201)
@@ -108,12 +115,13 @@ export default async function (fastify: FastifyInstance) {
       fastify.requirePermission('translations:update')
     ]
   }, async (request, reply) => {
-    const { id } = request.params as { id: number }
+    const { id } = request.params as { id: string }
+    const variantId = parseInt(id, 10)
     const data = request.body as UpdateTranslationVariantRequest
 
     try {
-      const variant = await fastify.translationsRepository.updateTranslationVariant(
-        id,
+      const variant = await fastify.translations.updateVariant(
+        variantId,
         data,
         (request.user as any).sub
       )
@@ -149,12 +157,13 @@ export default async function (fastify: FastifyInstance) {
       fastify.requirePermission('translations:approve')
     ]
   }, async (request, reply) => {
-    const { id } = request.params as { id: number }
+    const { id } = request.params as { id: string }
+    const variantId = parseInt(id, 10)
     const { status } = request.body as { status: 'DRAFT' | 'PENDING' | 'APPROVED' }
 
     try {
-      const variant = await fastify.translationsRepository.updateTranslationStatus(
-        id,
+      const variant = await fastify.translations.setStatus(
+        variantId,
         status,
         (request.user as any).sub
       )
@@ -183,10 +192,11 @@ export default async function (fastify: FastifyInstance) {
       fastify.requirePermission('translations:delete')
     ]
   }, async (request, reply) => {
-    const { id } = request.params as { id: number }
+    const { id } = request.params as { id: string }
+    const variantId = parseInt(id, 10)
 
     try {
-      await fastify.translationsRepository.deleteTranslationVariant(id, (request.user as any).sub)
+      await fastify.translations.deleteVariant(variantId, (request.user as any).sub)
       reply.code(204)
     } catch (error: any) {
       if (error.message.includes('not found')) {

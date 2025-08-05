@@ -31,7 +31,7 @@ export default async function (fastify: FastifyInstance) {
                 401: UnauthorizedErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('brands:read')]
     }, async (request, reply) => {
         const allBrands = await fastify.db.select().from(brandsTable)
         return allBrands
@@ -50,7 +50,7 @@ export default async function (fastify: FastifyInstance) {
                 404: NotFoundErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('brands:read')]
     }, async (request, reply) => {
         const { id } = request.params as BrandParams
 
@@ -89,7 +89,7 @@ export default async function (fastify: FastifyInstance) {
                 409: ConflictErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('brands:create')]
     }, async (request, reply) => {
         const data = request.body as CreateBrandRequest
 

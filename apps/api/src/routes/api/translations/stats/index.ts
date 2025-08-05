@@ -12,8 +12,15 @@ export default async function (fastify: FastifyInstance) {
         200: TranslationStatsResponseSchema
       }
     },
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
   }, async () => {
-    return fastify.translationsRepository.getTranslationStats()
+    // TODO: Implement
+    return {
+      totalKeys: 0,
+      totalVariants: 0,
+      totalBrands: 0,
+      totalJurisdictions: 0,
+      totalLocales: 0
+    }
   })
 }

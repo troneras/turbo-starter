@@ -7,11 +7,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate && bun run custom-migrations/index.ts",
     "db:migrate:custom": "bun run custom-migrations/index.ts",
-    "db:migrate:custom:test": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" bun run custom-migrations/index.ts",
-    "db:migrate:test": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" drizzle-kit migrate --config=drizzle.test.config.ts",
-    "db:studio:test": "drizzle-kit studio --config=drizzle.test.config.ts",
     "db:seed": "bun run seed.ts",
-    "db:seed:test": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" bun run seed.ts",
     "check-types": "bunx tsc --noEmit"
   },
   "devDependencies": {

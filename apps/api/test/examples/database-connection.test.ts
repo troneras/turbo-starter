@@ -40,8 +40,8 @@ describe('Database Connection Verification', () => {
         
         console.log('Connected to database:', dbName)
         
-        // Should be connected to the test database
-        expect(dbName).toBe('cms_platform_test')
+        // Should be connected to the development database (shared with tests)
+        expect(dbName).toBe('cms_platform_dev')
         
         console.log('✅ Direct database helper connected to test database')
     })
@@ -55,8 +55,8 @@ describe('Database Connection Verification', () => {
         expect(process.env.JWT_SECRET).toBeDefined()
         expect(process.env.NODE_ENV).toBe('test')
         
-        // DATABASE_URL should point to test database
-        expect(process.env.DATABASE_URL).toContain('cms_platform_test')
+        // DATABASE_URL should use the development database (tests share same DB)
+        expect(process.env.DATABASE_URL).toContain('cms_platform_dev')
         
         console.log('✅ Environment variables configured correctly for tests')
         console.log('DATABASE_URL:', process.env.DATABASE_URL)

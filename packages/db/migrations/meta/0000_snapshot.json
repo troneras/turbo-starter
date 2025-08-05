@@ -1,5 +1,5 @@
 {
-  "id": "c6a057d4-2ea2-45e9-bf9f-92e1d5922db5",
+  "id": "e71832db-8393-48d1-ac66-e6137921254c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -887,7 +887,8 @@
         },
         "status": {
           "name": "status",
-          "type": "varchar(20)",
+          "type": "release_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'OPEN'"
@@ -1038,7 +1039,8 @@
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(50)",
+          "type": "entity_type_enum",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -1104,15 +1106,10 @@
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(50)",
+          "type": "entity_type_enum",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "entity_name": {
-          "name": "entity_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "entity_key": {
           "name": "entity_key",
@@ -1144,15 +1141,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "title": {
-          "name": "title",
+        "value": {
+          "name": "value",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "slug": {
-          "name": "slug",
-          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -1161,7 +1152,7 @@
           "type": "varchar(20)",
           "primaryKey": false,
           "notNull": false,
-          "default": "'draft'"
+          "default": "'DRAFT'"
         },
         "published_at": {
           "name": "published_at",
@@ -1184,7 +1175,8 @@
         },
         "change_type": {
           "name": "change_type",
-          "type": "varchar(20)",
+          "type": "entity_change_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'UPDATE'"
@@ -1476,7 +1468,8 @@
         },
         "action": {
           "name": "action",
-          "type": "varchar(10)",
+          "type": "relation_action_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -1645,9 +1638,245 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.audit_events": {
+      "name": "audit_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "release_id": {
+          "name": "release_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "operation": {
+          "name": "operation",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "old_data": {
+          "name": "old_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_data": {
+          "name": "new_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_by": {
+          "name": "changed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changed_at": {
+          "name": "changed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "inet",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "audit_events_entity_idx": {
+          "name": "audit_events_entity_idx",
+          "columns": [
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "changed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_events_release_idx": {
+          "name": "audit_events_release_idx",
+          "columns": [
+            {
+              "expression": "release_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "changed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_events_user_idx": {
+          "name": "audit_events_user_idx",
+          "columns": [
+            {
+              "expression": "changed_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "changed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_events_entity_id_entities_id_fk": {
+          "name": "audit_events_entity_id_entities_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "entities",
+          "columnsFrom": [
+            "entity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_release_id_releases_id_fk": {
+          "name": "audit_events_release_id_releases_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "releases",
+          "columnsFrom": [
+            "release_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_events_changed_by_users_id_fk": {
+          "name": "audit_events_changed_by_users_id_fk",
+          "tableFrom": "audit_events",
+          "tableTo": "users",
+          "columnsFrom": [
+            "changed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.entity_change_type": {
+      "name": "entity_change_type",
+      "schema": "public",
+      "values": [
+        "CREATE",
+        "UPDATE",
+        "DELETE"
+      ]
+    },
+    "public.entity_type_enum": {
+      "name": "entity_type_enum",
+      "schema": "public",
+      "values": [
+        "translation",
+        "feature_flag",
+        "setting",
+        "page",
+        "article",
+        "content",
+        "menu",
+        "navigation",
+        "component",
+        "template",
+        "media",
+        "user_preference"
+      ]
+    },
+    "public.relation_action_type": {
+      "name": "relation_action_type",
+      "schema": "public",
+      "values": [
+        "ADD",
+        "REMOVE"
+      ]
+    },
+    "public.release_status": {
+      "name": "release_status",
+      "schema": "public",
+      "values": [
+        "OPEN",
+        "CLOSED",
+        "DEPLOYED",
+        "ROLLED_BACK"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {
     "public.deploy_seq": {
@@ -1663,7 +1892,137 @@
   },
   "roles": {},
   "policies": {},
-  "views": {},
+  "views": {
+    "public.v_entities": {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "release_id": {
+          "name": "release_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "entity_type_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_key": {
+          "name": "entity_key",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "brand_id": {
+          "name": "brand_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "locale_id": {
+          "name": "locale_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "parent_entity_id": {
+          "name": "parent_entity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'DRAFT'"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_type": {
+          "name": "change_type",
+          "type": "entity_change_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UPDATE'"
+        },
+        "change_set_id": {
+          "name": "change_set_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_reason": {
+          "name": "change_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "definition": "select \"id\", \"entity_id\", \"release_id\", \"entity_type\", \"entity_key\", \"brand_id\", \"jurisdiction_id\", \"locale_id\", \"parent_entity_id\", \"value\", \"status\", \"published_at\", \"is_deleted\", \"payload\", \"change_type\", \"change_set_id\", \"change_reason\", \"created_by\", \"created_at\" from \"entity_versions\"",
+      "name": "v_entities",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    }
+  },
   "_meta": {
     "columns": {},
     "schemas": {},

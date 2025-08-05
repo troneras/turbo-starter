@@ -1,55 +1,14 @@
--- Create canonical views for release-aware queries
--- These views automatically filter entities based on the active release
-
 -- =============================================================================
--- REQUIRED EXTENSIONS
+-- COMPLEX VIEWS THAT CANNOT BE REPRESENTED IN DRIZZLE SCHEMA FILES
 -- =============================================================================
+-- These views contain complex logic that cannot be expressed in Drizzle's view API
+-- The basic table structures and enums are now defined in Drizzle schema files
 
 -- Enable required PostgreSQL extensions
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- =============================================================================
--- ENUM TYPES FOR DATA VALIDATION
--- =============================================================================
-
--- Create enum types for better data validation and performance
-CREATE TYPE release_status AS ENUM ('OPEN', 'CLOSED', 'DEPLOYED', 'ROLLED_BACK');
-CREATE TYPE entity_change_type AS ENUM ('CREATE', 'UPDATE', 'DELETE');
-CREATE TYPE relation_action_type AS ENUM ('ADD', 'REMOVE');
-
--- Common entity types (can be extended)
-CREATE TYPE entity_type_enum AS ENUM (
-    'translation', 'feature_flag', 'setting', 'page', 'article', 'content',
-    'menu', 'navigation', 'component', 'template', 'media', 'user_preference'
-);
-
--- Audit event table for proper audit trail
-CREATE TABLE IF NOT EXISTS audit_events (
-    id BIGSERIAL PRIMARY KEY,
-    entity_id BIGINT NOT NULL,
-    release_id BIGINT NOT NULL,
-    entity_type VARCHAR(50),
-    operation VARCHAR(20) NOT NULL,
-    old_data JSONB,
-    new_data JSONB,
-    changed_by UUID NOT NULL,
-    changed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    request_id VARCHAR(255),
-    ip_address INET,
-    user_agent TEXT
-);
-
--- Indexes for audit events
-CREATE INDEX idx_audit_events_entity 
-  ON audit_events(entity_id, changed_at DESC);
-
-CREATE INDEX idx_audit_events_release 
-  ON audit_events(release_id, changed_at DESC);
-
-CREATE INDEX idx_audit_events_user 
-  ON audit_events(changed_by, changed_at DESC);
-
 -- Function to get entities for a specific release (optimized version)
+-- This function is used by the complex views below
 CREATE OR REPLACE FUNCTION get_entities_for_release(target_release_id bigint)
 RETURNS TABLE (
     entity_id bigint,
@@ -112,6 +71,7 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 -- Optimized canonical view for entities based on active release
+-- This view contains complex DISTINCT ON logic that cannot be represented in Drizzle
 CREATE OR REPLACE VIEW v_entities AS
 WITH active_release AS (
   SELECT id, deploy_seq
@@ -138,19 +98,3 @@ ORDER BY
   (ev.release_id = ar.id) DESC,  -- Prioritize active release
   r.deploy_seq DESC;  -- Then most recent deployed
 
--- View for active translations (convenience view)
-CREATE OR REPLACE VIEW v_active_translations AS
-SELECT 
-    entity_id as translation_id,
-    entity_key as translation_key,
-    brand_id,
-    jurisdiction_id,
-    locale_id,
-    payload->>'value' as translation_value,
-    payload->'metadata' as metadata,
-    is_deleted,
-    created_at,
-    created_by
-FROM v_entities
-WHERE entity_type = 'translation'
-AND is_deleted = FALSE;

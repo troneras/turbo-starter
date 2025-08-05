@@ -37,6 +37,7 @@ const navItems = [
             { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
             { name: "Releases", href: "/releases", icon: Rocket },
             { name: "Translations", href: "/translations", icon: Languages },
+            { name: "Simple Translations", href: "/translations-simple", icon: Globe },
             { name: "Keys", href: "/keys", icon: KeyRound },
             { name: "Brands", href: "/brands", icon: Building2 },
         ],

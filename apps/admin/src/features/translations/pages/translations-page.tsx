@@ -113,7 +113,7 @@ export function TranslationsPage() {
   // Define columns
   const columns = useMemo<ColumnDef<TranslationKeyWithStats>[]>(() => [
     {
-      accessorKey: 'fullKey',
+      accessorKey: 'entityKey',
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -126,7 +126,7 @@ export function TranslationsPage() {
       ),
       cell: ({ row }) => (
         <div className="font-mono text-sm">
-          {row.getValue('fullKey')}
+          {row.getValue('entityKey')}
         </div>
       ),
     },
@@ -441,7 +441,7 @@ export function TranslationsPage() {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => {
                         // Navigate to the key editing page
-                        window.location.href = `/keys?selected=${encodeURIComponent(row.original.fullKey)}`;
+                        window.location.href = `/keys?selected=${encodeURIComponent(row.original.entityKey)}`;
                       }}
                     >
                       {row.getVisibleCells().map(cell => (

@@ -38,7 +38,7 @@ export default async function (fastify: FastifyInstance) {
                 401: UnauthorizedErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('jurisdictions:read')]
     }, async (request, reply) => {
         const query = request.query as JurisdictionQuery
         
@@ -101,7 +101,7 @@ export default async function (fastify: FastifyInstance) {
                 404: NotFoundErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('jurisdictions:read')]
     }, async (request, reply) => {
         const { id } = request.params as JurisdictionParams
 

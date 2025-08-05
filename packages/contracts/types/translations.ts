@@ -43,7 +43,7 @@ export type TranslationStatus = Static<typeof TranslationStatus>
  * ```typescript
  * const key: TranslationKey = {
  *   id: 123,
- *   fullKey: "checkout.button.confirm",
+ *   entityKey: "checkout.button.confirm",
  *   description: "Confirm button in checkout flow",
  *   createdBy: "550e8400-e29b-41d4-a716-446655440000",
  *   createdAt: "2025-07-30T10:00:00Z"
@@ -63,7 +63,7 @@ export type TranslationKey = Static<typeof TranslationKeySchema>
  * const translation: TranslationVariant = {
  *   id: 456,
  *   keyId: 123,
- *   fullKey: "checkout.button.confirm",
+ *   entityKey: "checkout.button.confirm",
  *   locale: "en-US",
  *   brandId: null, // Generic translation
  *   value: "Confirm Order",

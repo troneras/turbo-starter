@@ -34,7 +34,7 @@ export default async function (fastify: FastifyInstance) {
                 401: UnauthorizedErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('permissions:read')]
     }, async (request, reply) => {
         const query = request.query as ListPermissionsQuery
 
@@ -102,7 +102,7 @@ export default async function (fastify: FastifyInstance) {
                 404: NotFoundErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('permissions:read')]
     }, async (request, reply) => {
         const { id } = request.params as PermissionParams
 

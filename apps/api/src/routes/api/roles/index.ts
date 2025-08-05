@@ -42,7 +42,7 @@ export default async function (fastify: FastifyInstance) {
                 401: UnauthorizedErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('roles:read')]
     }, async (request, reply) => {
         const currentUser = (request as any).user
         const isAdmin = currentUser.roles?.includes('admin')
@@ -123,7 +123,7 @@ export default async function (fastify: FastifyInstance) {
                 404: NotFoundErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('roles:read')]
     }, async (request, reply) => {
         const { id } = request.params as RoleParams
         const currentUser = (request as any).user
@@ -236,7 +236,7 @@ export default async function (fastify: FastifyInstance) {
                 404: NotFoundErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('roles:read')]
     }, async (request, reply) => {
         const { id } = request.params as RoleParams
 
@@ -303,7 +303,7 @@ export default async function (fastify: FastifyInstance) {
                 401: UnauthorizedErrorSchema
             }
         },
-        onRequest: [fastify.authenticate]
+        onRequest: [fastify.authenticate, fastify.requirePermission('roles:read')]
     }, async (request, reply) => {
         const currentUser = (request as any).user
         const isAdmin = currentUser.roles?.includes('admin')

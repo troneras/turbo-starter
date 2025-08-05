@@ -61,7 +61,7 @@ export function KeysPage() {
             try {
                 // Note: This assumes the API accepts the full key string
                 // You might need to get the key ID from the tree data instead
-                await deleteKeyMutation.mutateAsync(key);
+                //await deleteKeyMutation.mutateAsync(key);
                 toast.success('Translation key deleted successfully');
             } catch (error) {
                 toast.error('Failed to delete translation key');

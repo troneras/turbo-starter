@@ -20,11 +20,8 @@ export function config() {
 
 // Set test environment variables
 function setTestEnv() {
-    // Set test database URL - prioritize TEST_DATABASE_URL, then fallback to test default
-    const testDatabaseUrl = process.env.TEST_DATABASE_URL || "postgresql://dev:dev123@localhost:5433/cms_platform_test"
-
-    // IMPORTANT: Set DATABASE_URL to the test database URL so the env plugin picks it up
-    process.env.DATABASE_URL = testDatabaseUrl
+    // Use the main DATABASE_URL for tests - no separate test database
+    // Don't override DATABASE_URL if it's already set
 
     // Set other required test environment variables
     if (!process.env.JWT_SECRET) {

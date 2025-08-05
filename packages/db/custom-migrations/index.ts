@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-const connectionString = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://dev:dev123@localhost:5432/cms_platform_dev'
+const connectionString = process.env.DATABASE_URL || 'postgresql://dev:dev123@localhost:5432/cms_platform_dev'
 
 // Create a table to track custom migrations
 const createMigrationsTable = sql`

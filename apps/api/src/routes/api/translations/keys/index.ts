@@ -12,7 +12,7 @@ import type {
 import { Type } from '@sinclair/typebox'
 
 const ParamsSchema = Type.Object({
-  id: Type.Number()
+  id: Type.String({ pattern: '^[0-9]+$' })
 })
 
 const QuerySchema = Type.Object({
@@ -32,10 +32,9 @@ export default async function (fastify: FastifyInstance) {
         200: Type.Array(TranslationKeySchema)
       }
     },
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
   }, async (request) => {
-    const { parentPath, depth } = request.query as { parentPath?: string; depth?: number }
-    return fastify.translationsRepository.getTranslationKeys(parentPath, depth)
+    return fastify.translations.listKeys()
   })
 
   // Create translation key
@@ -57,8 +56,8 @@ export default async function (fastify: FastifyInstance) {
     const data = request.body as CreateTranslationKeyRequest
 
     try {
-      const key = await fastify.translationsRepository.createTranslationKey(
-        data,
+      const key = await fastify.translations.createKey(
+        { entityKey: data.entityKey, description: data.description ?? null },
         (request.user as any).sub
       )
       reply.code(201)
@@ -88,12 +87,13 @@ export default async function (fastify: FastifyInstance) {
       fastify.requirePermission('translations:update')
     ]
   }, async (request, reply) => {
-    const { id } = request.params as { id: number }
+    const { id } = request.params as { id: string }
+    const keyId = parseInt(id, 10)
     const data = request.body as UpdateTranslationKeyRequest
 
     try {
-      const key = await fastify.translationsRepository.updateTranslationKey(
-        id,
+      const key = await fastify.translations.updateKey(
+        keyId,
         data,
         (request.user as any).sub
       )
@@ -122,10 +122,11 @@ export default async function (fastify: FastifyInstance) {
       fastify.requirePermission('translations:delete')
     ]
   }, async (request, reply) => {
-    const { id } = request.params as { id: number }
+    const { id } = request.params as { id: string }
+    const keyId = parseInt(id, 10)
 
     try {
-      await fastify.translationsRepository.deleteTranslationKey(id, (request.user as any).sub)
+      await fastify.translations.deleteKey(keyId, (request.user as any).sub)
       reply.code(204)
     } catch (error: any) {
       if (error.message.includes('not found')) {

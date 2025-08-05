@@ -8,12 +8,10 @@
         "build": "bun build src/server.ts src/worker.ts --outdir dist --target node",
         "start": "bun run dist/server.js",
         "worker": "bun run dist/worker.js",
-        "test": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" bun test",
-        "test:watch": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" bun test --watch",
-        "test:coverage": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" bun test --coverage",
-        "test:integration": "TEST_DATABASE_URL=\"postgresql://dev:dev123@localhost:5433/cms_platform_test\" bun test test/routes/",
-        "test:setup": "docker-compose up -d postgres_test && sleep 3 && bun run --filter=db db:migrate:test && echo 'Test database is ready!'",
-        "test:teardown": "docker-compose stop postgres_test",
+        "test": "bun test",
+        "test:watch": "bun test --watch",
+        "test:coverage": "bun test --coverage",
+        "test:integration": "bun test test/routes/",
         "check-types": "bunx tsc --noEmit"
     },
     "dependencies": {

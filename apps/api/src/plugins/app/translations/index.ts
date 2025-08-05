@@ -1,11 +1,11 @@
 import fp from 'fastify-plugin'
 import type { FastifyInstance } from 'fastify'
-import { translationsRepositoryPlugin } from './translations-repository'
+import { translationsPlugin } from './translations-repository'
 
 export default fp(async function (fastify: FastifyInstance) {
   // Register repository
-  await fastify.register(translationsRepositoryPlugin)
+  await fastify.register(translationsPlugin)
 }, {
   name: 'translations',
-  dependencies: ['db', 'releases']
+  dependencies: ['db', 'releases', 'entity-service']
 })

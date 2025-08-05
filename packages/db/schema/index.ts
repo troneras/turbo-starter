@@ -153,3 +153,5 @@ export type NewUserAuditLog = typeof userAuditLogs.$inferInsert
 export * from './releases'
 export * from './entities'
 export * from './views'
+export * from './enums'
+export * from './audit'

@@ -79,7 +79,6 @@
       "dependencies": {
         "@cms/contracts": "workspace:*",
         "@cms/db": "workspace:*",
-        "@cms/tsconfig": "workspace:*",
         "@fastify/autoload": "^6.3.1",
         "@fastify/cors": "^11.0.1",
         "@fastify/env": "^5.0.2",
@@ -101,6 +100,7 @@
         "postgres": "^3.4.7",
       },
       "devDependencies": {
+        "@cms/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^22.12.2",
         "typescript": "^5.8.3",

@@ -58,9 +58,9 @@ export function TranslationVariants({
   const [editValue, setEditValue] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  // Find key by fullKey
+  // Find key by entityKey
   const { data: keysData } = useTranslationKeys({ search: translationKey });
-  const keyData = keysData?.keys.find(k => k.fullKey === translationKey);
+  const keyData = keysData?.keys.find(k => k.entityKey === translationKey);
 
   // Get translations for this key
   const { data, isLoading } = useTranslations(
@@ -314,7 +314,7 @@ function CreateTranslationDialog({
       // TODO: Fix this - need to use the correct mutation and request format
       await Promise.resolve(); // Placeholder
       // await createMutation.mutateAsync({
-      //   fullKey: keyName, // Use fullKey instead of keyId
+      //   entityKey: keyName, // Use entityKey instead of keyId
       //   locale,
       //   brandId,
       //   value,

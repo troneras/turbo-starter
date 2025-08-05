@@ -37,12 +37,14 @@
     "db:migrate": {
       "dependsOn": [
         "^db:migrate"
-      ]
+      ],
+      "cache": false
     },
     "db:seed": {
       "dependsOn": [
         "^db:seed"
-      ]
+      ],
+      "cache": false
     },
     "preview": {
       "cache": false,

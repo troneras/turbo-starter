@@ -12,7 +12,7 @@ export const TranslationStatus = Type.Union([
 // Translation key schema
 export const TranslationKeySchema = Type.Object({
   id: Type.Number({ description: "Entity ID of the translation key" }),
-  fullKey: Type.String({ 
+  entityKey: Type.String({ 
     pattern: "^[a-z0-9_.]+$",
     description: "Dotted path key (e.g., checkout.button.confirm)" 
   }),
@@ -29,7 +29,7 @@ export const TranslationKeySchema = Type.Object({
 export const TranslationVariantSchema = Type.Object({
   id: Type.Number({ description: "Entity ID of the translation" }),
   keyId: Type.Number({ description: "ID of the parent translation key" }),
-  fullKey: Type.String({ description: "Copy of the key for easier queries" }),
+  entityKey: Type.String({ description: "Copy of the key for easier queries" }),
   locale: Type.String({ 
     pattern: "^[a-z]{2}-[A-Z]{2}$",
     description: "Locale code (e.g., en-US)" 
@@ -62,7 +62,7 @@ export const TranslationVariantSchema = Type.Object({
 
 // Request schemas
 export const CreateTranslationKeyRequestSchema = Type.Object({
-  fullKey: Type.String({ 
+  entityKey: Type.String({ 
     pattern: "^[a-z0-9_.]+$",
     description: "Dotted path key" 
   }),
@@ -80,10 +80,11 @@ export const UpdateTranslationKeyRequestSchema = Type.Object({
 })
 
 export const CreateTranslationVariantRequestSchema = Type.Object({
-  fullKey: Type.String({ 
+  entityKey: Type.String({ 
     pattern: "^[a-z0-9_.]+$",
     description: "Translation key to create variant for" 
   }),
+  keyId: Type.Number({ description: "ID of the translation key" }),
   locale: Type.String({ 
     pattern: "^[a-z]{2}-[A-Z]{2}$",
     description: "Locale code (e.g., en-US)" 

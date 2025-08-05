@@ -1,11 +1,12 @@
 import { pgTable, bigserial, bigint, varchar, text, timestamp, uuid, jsonb, index, integer, boolean, unique, primaryKey } from 'drizzle-orm/pg-core'
 import { releases } from './releases'
 import { users, brands, jurisdictions, locales } from './index'
+import { entityChangeTypeEnum, entityTypeEnum, relationActionTypeEnum } from './enums'
 
 // Core entity table
 export const entities = pgTable('entities', {
   id: bigserial('id', { mode: 'bigint' }),
-  entityType: varchar('entity_type', { length: 50 }).notNull(),
+  entityType: entityTypeEnum('entity_type').notNull(),
   deletedAt: timestamp('deleted_at'),
 }, (table) => [
   primaryKey({ columns: [table.id] }),
@@ -25,8 +26,7 @@ export const entityVersions = pgTable(
       .notNull(),
 
     // Universal content fields
-    entityType: varchar('entity_type', { length: 50 }).notNull(),
-    entityName: text('entity_name'),
+    entityType: entityTypeEnum('entity_type').notNull(),
     entityKey: varchar('entity_key', { length: 255 }),
     brandId: integer('brand_id').references(() => brands.id),
     jurisdictionId: integer('jurisdiction_id').references(() => jurisdictions.id),
@@ -35,9 +35,8 @@ export const entityVersions = pgTable(
       .references(() => entities.id, { onDelete: 'set null' }),
 
     // Core content fields
-    title: text('title'),
-    slug: varchar('slug', { length: 255 }),
-    status: varchar('status', { length: 20 }).default('draft'),
+    value: text('value'),
+    status: varchar('status', { length: 20 }).default('DRAFT'),
     publishedAt: timestamp('published_at'),
     isDeleted: boolean('is_deleted').default(false).notNull(),
 
@@ -45,10 +44,9 @@ export const entityVersions = pgTable(
     payload: jsonb('payload').$type<Record<string, any>>(),
 
     // Change tracking
-    changeType: varchar('change_type', { length: 20 })
+    changeType: entityChangeTypeEnum('change_type')
       .notNull()
-      .default('UPDATE')
-      .$type<'CREATE' | 'UPDATE' | 'DELETE'>(),
+      .default('UPDATE'),
     changeSetId: uuid('change_set_id'),
     changeReason: text('change_reason'),
 
@@ -62,6 +60,7 @@ export const entityVersions = pgTable(
     primaryKey({ columns: [table.id] }),
     unique().on(table.entityId, table.releaseId),
     index('entity_versions_entity_type_idx').on(table.entityType),
+    
     index('entity_versions_brand_idx').on(table.brandId),
     index('entity_versions_release_idx').on(table.releaseId),
     index('entity_versions_entity_release_optimized_idx').on(table.entityId, table.releaseId),
@@ -84,7 +83,7 @@ export const relationVersions = pgTable('relation_versions', {
     .references(() => entities.id)
     .notNull(),
   relationType: varchar('relation_type', { length: 50 }).notNull(),
-  action: varchar('action', { length: 10 }).notNull().$type<'ADD' | 'REMOVE'>(),
+  action: relationActionTypeEnum('action').notNull(),
   position: integer('position'), // For ordered relationships
   metadata: jsonb('metadata'),
   createdBy: uuid('created_by')
