@@ -109,7 +109,8 @@ describe('Release Trigger Test', () => {
       })
       
       // Check if it contains our trigger error message
-      expect(error.message).toContain('Cannot modify entities in CLOSED release')
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).toContain('Cannot modify entities in CLOSED release')
     }
   })
 })

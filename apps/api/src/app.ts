@@ -87,6 +87,9 @@ export default async function serviceApp(fastify: FastifyInstance, opts: Fastify
                 default:
                     error = 'Client Error'
             }
+        } else if (process.env.NODE_ENV === 'test') {
+            // In test mode, include the actual error message for debugging
+            message = err.message || 'Internal Server Error'
         }
 
         return { 

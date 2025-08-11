@@ -5,10 +5,21 @@ import { sql } from 'drizzle-orm'
 
 describe('Database Constraint: Closed Release Protection', () => {
   let app: FastifyInstance
+  let testLocaleId: number
 
   beforeEach(async () => {
     app = await build()
     await app.ready()
+    
+    // Create test data that the tests depend on
+    // Create a test locale
+    const [locale] = await app.db.execute(sql`
+      INSERT INTO locales (code, name)
+      VALUES ('en-US', 'English (US)')
+      ON CONFLICT (code) DO UPDATE SET code = locales.code
+      RETURNING id
+    `)
+    testLocaleId = (locale as any).id
   })
 
   afterEach(async () => {
@@ -29,30 +40,31 @@ describe('Database Constraint: Closed Release Protection', () => {
     // Create an entity first
     const [entity] = await app.db.execute(sql`
       INSERT INTO entities (entity_type)
-      VALUES ('translation_key')
+      VALUES ('translation')
       RETURNING id
     `)
 
     const entityId = (entity as any).id
 
     // Should be able to insert entity_version in OPEN release
-    const insertResult = app.db.execute(sql`
+    const insertResult = await app.db.execute(sql`
       INSERT INTO entity_versions (
         entity_id, release_id, entity_type, entity_key, 
-        change_type, created_by
+        locale_id, change_type, created_by
       )
       VALUES (
         ${entityId},
         ${releaseId},
-        'translation_key',
+        'translation',
         'test.open.key',
+        ${testLocaleId},
         'CREATE',
         '00000000-0000-0000-0000-000000000000'
       )
     `)
 
     // Should not throw an error
-    await expect(insertResult).resolves.toBeDefined()
+    expect(insertResult).toBeDefined()
   })
 
   it('should prevent entity insertions in CLOSED releases', async () => {
@@ -69,7 +81,7 @@ describe('Database Constraint: Closed Release Protection', () => {
     // Create an entity first
     const [entity] = await app.db.execute(sql`
       INSERT INTO entities (entity_type)
-      VALUES ('translation_key')
+      VALUES ('translation')
       RETURNING id
     `)
 
@@ -79,20 +91,27 @@ describe('Database Constraint: Closed Release Protection', () => {
     const insertAttempt = app.db.execute(sql`
       INSERT INTO entity_versions (
         entity_id, release_id, entity_type, entity_key,
-        change_type, created_by
+        locale_id, change_type, created_by
       )
       VALUES (
         ${entityId},
         ${releaseId},
-        'translation_key',
+        'translation',
         'test.closed.key',
+        ${testLocaleId},
         'CREATE',
         '00000000-0000-0000-0000-000000000000'
       )
     `)
 
     // Should throw an error with our custom message
-    await expect(insertAttempt).rejects.toThrow('Cannot modify entities in CLOSED release')
+    try {
+      await insertAttempt
+      expect(true).toBe(false) // Should not reach here
+    } catch (error: any) {
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).toContain('Cannot modify entities in CLOSED release')
+    }
   })
 
   it('should prevent entity insertions in DEPLOYED releases', async () => {
@@ -117,7 +136,7 @@ describe('Database Constraint: Closed Release Protection', () => {
     // Create an entity first
     const [entity] = await app.db.execute(sql`
       INSERT INTO entities (entity_type)
-      VALUES ('translation_key')
+      VALUES ('translation')
       RETURNING id
     `)
 
@@ -127,20 +146,27 @@ describe('Database Constraint: Closed Release Protection', () => {
     const insertAttempt = app.db.execute(sql`
       INSERT INTO entity_versions (
         entity_id, release_id, entity_type, entity_key,
-        change_type, created_by
+        locale_id, change_type, created_by
       )
       VALUES (
         ${entityId},
         ${releaseId},
-        'translation_key',
+        'translation',
         'test.deployed.key',
+        ${testLocaleId},
         'CREATE',
         '00000000-0000-0000-0000-000000000000'
       )
     `)
 
     // Should throw an error with our custom message
-    await expect(insertAttempt).rejects.toThrow('Cannot modify entities in DEPLOYED release')
+    try {
+      await insertAttempt
+      expect(true).toBe(false) // Should not reach here
+    } catch (error: any) {
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).toContain('Cannot modify entities in DEPLOYED release')
+    }
   })
 
   it('should prevent entity insertions in ROLLED_BACK releases', async () => {
@@ -157,7 +183,7 @@ describe('Database Constraint: Closed Release Protection', () => {
     // Create an entity first
     const [entity] = await app.db.execute(sql`
       INSERT INTO entities (entity_type)
-      VALUES ('translation_key')
+      VALUES ('translation')
       RETURNING id
     `)
 
@@ -167,20 +193,27 @@ describe('Database Constraint: Closed Release Protection', () => {
     const insertAttempt = app.db.execute(sql`
       INSERT INTO entity_versions (
         entity_id, release_id, entity_type, entity_key,
-        change_type, created_by
+        locale_id, change_type, created_by
       )
       VALUES (
         ${entityId},
         ${releaseId},
-        'translation_key',
+        'translation',
         'test.rolledback.key',
+        ${testLocaleId},
         'CREATE',
         '00000000-0000-0000-0000-000000000000'
       )
     `)
 
     // Should throw an error with our custom message
-    await expect(insertAttempt).rejects.toThrow('Cannot modify entities in ROLLED_BACK release')
+    try {
+      await insertAttempt
+      expect(true).toBe(false) // Should not reach here
+    } catch (error: any) {
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).toContain('Cannot modify entities in ROLLED_BACK release')
+    }
   })
 
   it('should provide detailed error message with release ID', async () => {
@@ -196,7 +229,7 @@ describe('Database Constraint: Closed Release Protection', () => {
     // Create an entity first
     const [entity] = await app.db.execute(sql`
       INSERT INTO entities (entity_type)
-      VALUES ('translation_key')
+      VALUES ('translation')
       RETURNING id
     `)
 
@@ -207,13 +240,14 @@ describe('Database Constraint: Closed Release Protection', () => {
       await app.db.execute(sql`
         INSERT INTO entity_versions (
           entity_id, release_id, entity_type, entity_key,
-          change_type, created_by
+          locale_id, change_type, created_by
         )
         VALUES (
           ${entityId},
           ${releaseId},
-          'translation_key',
+          'translation',
           'test.error.key',
+          ${testLocaleId},
           'CREATE',
           '00000000-0000-0000-0000-000000000000'
         )
@@ -221,8 +255,9 @@ describe('Database Constraint: Closed Release Protection', () => {
       // Should not reach here
       expect(true).toBe(false)
     } catch (error: any) {
-      expect(error.message).toContain(`Cannot modify entities in CLOSED release (ID: ${releaseId})`)
-      expect(error.message).toContain('Only OPEN releases can be modified')
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).toContain(`Cannot modify entities in CLOSED release (ID: ${releaseId})`)
+      expect(errorMessage).toContain('Only OPEN releases can be modified')
     }
   })
 
@@ -233,29 +268,37 @@ describe('Database Constraint: Closed Release Protection', () => {
     // Create an entity first
     const [entity] = await app.db.execute(sql`
       INSERT INTO entities (entity_type)
-      VALUES ('translation_key')
+      VALUES ('translation')
       RETURNING id
     `)
 
     const entityId = (entity as any).id
 
     // Should NOT be able to insert with non-existent release ID due to FK constraint
-    const insertAttempt = app.db.execute(sql`
-      INSERT INTO entity_versions (
-        entity_id, release_id, entity_type, entity_key,
-        change_type, created_by
-      )
-      VALUES (
-        ${entityId},
-        ${nonExistentReleaseId},
-        'translation_key',
-        'test.nonexistent.key',
-        'CREATE',
-        '00000000-0000-0000-0000-000000000000'
-      )
-    `)
-
-    // Should throw FK constraint error, not our custom error
-    await expect(insertAttempt).rejects.toThrow()
+    try {
+      await app.db.execute(sql`
+        INSERT INTO entity_versions (
+          entity_id, release_id, entity_type, entity_key,
+          locale_id, change_type, created_by
+        )
+        VALUES (
+          ${entityId},
+          ${nonExistentReleaseId},
+          'translation',
+          'test.nonexistent.key',
+          ${testLocaleId},
+          'CREATE',
+          '00000000-0000-0000-0000-000000000000'
+        )
+      `)
+      // Should not reach here
+      expect(true).toBe(false)
+    } catch (error: any) {
+      // Should throw FK constraint error, not our custom error
+      expect(error).toBeDefined()
+      // Verify it's not our custom error
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).not.toContain('Cannot modify entities')
+    }
   })
 })

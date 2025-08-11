@@ -46,6 +46,9 @@ describe('Translations API', () => {
         }
       })
 
+      if (res.statusCode !== 201) {
+        console.error('Error response:', res.payload)
+      }
       expect(res.statusCode).toBe(201)
       const key = JSON.parse(res.payload)
       expect(key.entityKey).toBe('app.welcome.message')

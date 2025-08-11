@@ -6,7 +6,7 @@ describe('Rate Limiting', () => {
     let rateLimitMax: string
 
     beforeEach(async () => {
-        rateLimitMax = process.env.RATE_LIMIT_MAX || '500'
+        rateLimitMax = process.env.RATE_LIMIT_MAX || '5000'
         process.env.RATE_LIMIT_MAX = '4'
         app = await build()
         await app.redis.flushall()

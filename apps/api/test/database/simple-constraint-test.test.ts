@@ -5,10 +5,31 @@ import { sql } from 'drizzle-orm'
 
 describe('Release Constraint Verification', () => {
   let app: FastifyInstance
+  let testLocaleId: number
+  let testBrandId: number
 
   beforeEach(async () => {
     app = await build()
     await app.ready()
+    
+    // Create test data that the tests depend on
+    // Create a test brand first
+    const [brand] = await app.db.execute(sql`
+      INSERT INTO brands (name, description)
+      VALUES ('Test Brand', 'Test brand for constraint tests')
+      ON CONFLICT (name) DO UPDATE SET name = brands.name
+      RETURNING id
+    `)
+    testBrandId = (brand as any).id
+    
+    // Create a test locale
+    const [locale] = await app.db.execute(sql`
+      INSERT INTO locales (code, name)
+      VALUES ('en-US', 'English (US)')
+      ON CONFLICT (code) DO UPDATE SET code = locales.code
+      RETURNING id
+    `)
+    testLocaleId = (locale as any).id
   })
 
   afterEach(async () => {
@@ -37,12 +58,6 @@ describe('Release Constraint Verification', () => {
   })
 
   it('should prevent entity insertions in CLOSED releases', async () => {
-    // Get a locale first to satisfy the constraint
-    const [locale] = await app.db.execute(sql`
-      SELECT id FROM locales LIMIT 1
-    `)
-    
-    const localeId = (locale as any)?.id || 1
 
     // Create a CLOSED release directly in database
     const [release] = await app.db.execute(sql`
@@ -75,7 +90,7 @@ describe('Release Constraint Verification', () => {
           ${releaseId},
           'translation',
           'test.closed.key',
-          ${localeId},
+          ${testLocaleId},
           'CREATE',
           '00000000-0000-0000-0000-000000000000'
         )
@@ -83,16 +98,15 @@ describe('Release Constraint Verification', () => {
     }
 
     // Should throw an error with our custom message
-    await expect(insertAttempt()).rejects.toThrow('Cannot modify entities in CLOSED release')
+    try {
+      await insertAttempt()
+      expect(true).toBe(false) // Should not reach here
+    } catch (error: any) {
+      expect(error.cause?.message || error.message).toContain('Cannot modify entities in CLOSED release')
+    }
   })
 
   it('should allow entity insertions in OPEN releases', async () => {
-    // Get a locale first to satisfy the constraint
-    const [locale] = await app.db.execute(sql`
-      SELECT id FROM locales LIMIT 1
-    `)
-    
-    const localeId = (locale as any)?.id || 1
 
     // Create an OPEN release directly in database
     const [release] = await app.db.execute(sql`
@@ -124,7 +138,7 @@ describe('Release Constraint Verification', () => {
         ${releaseId},
         'translation',
         'test.open.key',
-        ${localeId},
+        ${testLocaleId},
         'CREATE',
         '00000000-0000-0000-0000-000000000000'
       )
@@ -137,12 +151,6 @@ describe('Release Constraint Verification', () => {
   })
 
   it('should include release ID in error message', async () => {
-    // Get a locale first to satisfy the constraint
-    const [locale] = await app.db.execute(sql`
-      SELECT id FROM locales LIMIT 1
-    `)
-    
-    const localeId = (locale as any)?.id || 1
 
     // Create a CLOSED release
     const [release] = await app.db.execute(sql`
@@ -174,7 +182,7 @@ describe('Release Constraint Verification', () => {
           ${releaseId},
           'translation',
           'test.error.key',
-          ${localeId},
+          ${testLocaleId},
           'CREATE',
           '00000000-0000-0000-0000-000000000000'
         )
@@ -182,8 +190,9 @@ describe('Release Constraint Verification', () => {
       // Should not reach here
       expect(true).toBe(false)
     } catch (error: any) {
-      expect(error.message).toContain(`Cannot modify entities in CLOSED release (ID: ${releaseId})`)
-      expect(error.message).toContain('Only OPEN releases can be modified')
+      const errorMessage = error.cause?.message || error.message
+      expect(errorMessage).toContain(`Cannot modify entities in CLOSED release (ID: ${releaseId})`)
+      expect(errorMessage).toContain('Only OPEN releases can be modified')
     }
   })
 })

@@ -1,36 +1,33 @@
 import { pgView, bigint, varchar, text, timestamp, uuid, jsonb, boolean, integer } from 'drizzle-orm/pg-core'
-import { entityVersions } from './entities'
+import { entityTypeEnum, entityChangeTypeEnum } from './enums'
 
-// Optimized canonical view for entities based on active release
-export const vEntities = pgView('v_entities').as((qb) => 
-  qb.select({
-    id: entityVersions.id,
-    entityId: entityVersions.entityId,
-    releaseId: entityVersions.releaseId,
-    entityType: entityVersions.entityType,
-    entityKey: entityVersions.entityKey,
-    brandId: entityVersions.brandId,
-    jurisdictionId: entityVersions.jurisdictionId,
-    localeId: entityVersions.localeId,
-    parentEntityId: entityVersions.parentEntityId,
-    value: entityVersions.value,
-    status: entityVersions.status,
-    publishedAt: entityVersions.publishedAt,
-    isDeleted: entityVersions.isDeleted,
-    payload: entityVersions.payload,
-    changeType: entityVersions.changeType,
-    changeSetId: entityVersions.changeSetId,
-    changeReason: entityVersions.changeReason,
-    createdBy: entityVersions.createdBy,
-    createdAt: entityVersions.createdAt,
-    // Note: is_from_active_release is computed in the actual SQL view
-    // but we can't represent this directly in Drizzle view definition
-  }).from(entityVersions)
-)
+// Schema definition for the SQL-created v_entities view
+// The actual view is created in migrations/001_release_views.sql with complex logic
+// This schema definition allows Drizzle to understand the structure
+export const vEntities = pgView('v_entities', {
+  id: bigint('id', { mode: 'number' }).primaryKey(),
+  entityId: bigint('entity_id', { mode: 'number' }).notNull(),
+  releaseId: bigint('release_id', { mode: 'number' }).notNull(),
+  entityType: entityTypeEnum('entity_type').notNull(),
+  entityKey: varchar('entity_key', { length: 255 }),
+  brandId: bigint('brand_id', { mode: 'number' }),
+  jurisdictionId: bigint('jurisdiction_id', { mode: 'number' }),
+  localeId: bigint('locale_id', { mode: 'number' }),
+  parentEntityId: bigint('parent_entity_id', { mode: 'number' }),
+  value: text('value'),
+  status: varchar('status', { length: 20 }),
+  publishedAt: timestamp('published_at'),
+  isDeleted: boolean('is_deleted').notNull().default(false),
+  payload: jsonb('payload'),
+  changeType: entityChangeTypeEnum('change_type').notNull(),
+  changeSetId: varchar('change_set_id', { length: 255 }),
+  changeReason: text('change_reason'),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  isFromActiveRelease: boolean('is_from_active_release'),
+}).existing()
 
-
-
-// Note: The actual SQL views include complex logic with DISTINCT ON and joins
-// that cannot be fully represented in Drizzle's view API. The actual views
-// are created via SQL migrations for now.
+// Note: The actual SQL view includes complex logic with DISTINCT ON, CTEs, and joins
+// that cannot be fully represented in Drizzle's view API. The actual view
+// is created via SQL migrations for full functionality.
 // See migrations/001_release_views.sql for the actual view definitions

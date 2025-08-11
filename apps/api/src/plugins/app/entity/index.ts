@@ -48,11 +48,24 @@ async function withRelease<T>(
   releaseId: number | undefined,
   fn: () => Promise<T>
 ): Promise<T> {
-  // default to latest deployed if no explicit id
-  const rel = releaseId ?? Number(
-    (await db.execute(sql`SELECT get_latest_deployed_release()`))
-      .at(0)?.get_latest_deployed_release
-  );
+  // Default to OPEN release for modifications, latest deployed for reads
+  let rel = releaseId;
+  if (!rel) {
+    // Try to get an OPEN release first
+    const openRelease = await db.execute(sql`
+      SELECT id FROM releases WHERE status = 'OPEN' ORDER BY created_at DESC LIMIT 1
+    `);
+    
+    if (openRelease.length > 0) {
+      rel = Number(openRelease[0]?.id);
+    } else {
+      // Fall back to latest deployed
+      rel = Number(
+        (await db.execute(sql`SELECT get_latest_deployed_release()`))
+          .at(0)?.get_latest_deployed_release
+      );
+    }
+  }
 
   await db.execute(sql`SELECT set_active_release(${rel})`);
   try      { return await fn(); }
@@ -94,11 +107,12 @@ export class EntityService<P extends EntityPayload> {
 
   private async assertUnique(draft: P, releaseId?: number) {
     if (!this.spec.uniqueKeys?.length) return;
+    
     const conds = this.spec.uniqueKeys.map(k => {
-      // Map camelCase field names to snake_case column names
       const columnName = this.fieldToColumn(k as string);
-      return sql`${sql.identifier(columnName)} = ${draft[k]}`;
+      return sql`${sql.raw(columnName)} = ${draft[k]}`;
     });
+
     const exists = await withRelease(this.db, releaseId, () =>
       this.db.execute(sql`
         SELECT 1 FROM v_entities
@@ -139,7 +153,7 @@ export class EntityService<P extends EntityPayload> {
         new_v AS (
           INSERT INTO ${schema.entityVersions} (
             entity_id, release_id, entity_type,
-            ${sql.join(Object.keys(cols).map(k => this.fieldToColumn(k)), sql`, `)},
+            ${sql.join(Object.keys(cols).map(k => sql.raw(this.fieldToColumn(k))), sql`, `)},
             payload, change_type, created_by
           )
           SELECT
@@ -172,7 +186,7 @@ export class EntityService<P extends EntityPayload> {
       const [row] = await this.db.execute(sql`
         INSERT INTO ${schema.entityVersions} (
           entity_id, release_id, entity_type,
-          ${sql.join(Object.keys(cols).map(k => this.fieldToColumn(k)), sql`, `)},
+          ${sql.join(Object.keys(cols).map(k => sql.raw(this.fieldToColumn(k))), sql`, `)},
           payload, change_type, created_by
         )
         SELECT
@@ -215,14 +229,17 @@ export class EntityService<P extends EntityPayload> {
 
   /** generic find – leverages v_entities so caller needn't care about release logic */
   async find(filter: Partial<P>, ctx: { releaseId?: number } = {}): Promise<Entity<P>[]> {
-    const where: any[] = [eq(schema.entityVersions.entityType, this.spec.entityType as typeof entityTypeEnum.enumValues[number])];
+    const conds = [sql`entity_type = ${this.spec.entityType}`];
     Object.entries(filter).forEach(([k, v]) => {
       const columnName = this.fieldToColumn(k);
-      where.push(sql`${sql.identifier(columnName)} = ${v}`);
+      conds.push(sql.raw(`${columnName} = ?`, [v]));
     });
 
     const rows = await withRelease(this.db, ctx.releaseId, () =>
-      this.db.select().from(schema.vEntities).where(and(...where))
+      this.db.execute(sql`
+        SELECT * FROM v_entities
+        WHERE ${sql.join(conds, sql` AND `)}
+      `)
     );
     return rows.map(r => this.rowToDomain(r));
   }

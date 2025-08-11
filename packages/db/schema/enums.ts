@@ -24,6 +24,7 @@ export const relationActionTypeEnum = pgEnum('relation_action_type', [
 // Entity type enum for common entity types
 export const entityTypeEnum = pgEnum('entity_type_enum', [
   'translation',
+  'translation_key',
   'feature_flag', 
   'setting',
   'page',
