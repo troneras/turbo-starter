@@ -184,24 +184,24 @@ export class EntityService<P extends EntityPayload> {
     const { json, cols } = this.splitPayload(patch);
 
     return withRelease(this.db, opts.releaseId, async () => {
+      // Perform in-place UPDATE of the current version within the active release
+      const assignments = [
+        // update typed columns only if provided
+        ...Object.keys(cols).map((k) => {
+          const colName = this.fieldToColumn(k);
+          return sql`${sql.raw(colName)} = ${cols[k as keyof typeof cols]}`;
+        }),
+        // merge json payload
+        sql`payload = COALESCE(payload, '{}'::jsonb) || ${JSON.stringify(json)}::jsonb`,
+        sql`change_type = 'UPDATE'`
+      ];
+
       const [row] = await this.db.execute(sql`
-        INSERT INTO ${schema.entityVersions} (
-          entity_id, release_id, entity_type,
-          ${sql.join(Object.keys(cols).map(k => sql.raw(this.fieldToColumn(k))), sql`, `)},
-          payload, change_type, created_by
-        )
-        SELECT
-          ${entityId},
-          get_active_release(),
-          ${this.spec.entityType}::entity_type_enum,
-          ${sql.join(Object.values(cols), sql`, `)},
-          COALESCE(
-            (SELECT payload FROM v_entities WHERE entity_id = ${entityId}) || 
-            ${JSON.stringify(json)}::jsonb,
-            ${JSON.stringify(json)}::jsonb
-          ),
-          'UPDATE',
-          ${opts.userId}
+        UPDATE ${schema.entityVersions}
+        SET ${sql.join(assignments, sql`, `)}
+        WHERE entity_id = ${entityId}
+          AND release_id = get_active_release()
+          AND entity_type = ${this.spec.entityType}::entity_type_enum
         RETURNING *;
       `);
       if (!row) throw new Error('entity not found');
@@ -241,7 +241,6 @@ export class EntityService<P extends EntityPayload> {
       WHERE ${sql.join(conds, sql` AND `)}
     `);
     // Print the Postgres row list in a human-readable format
-    console.log('Postgres rows:', JSON.stringify(rows, null, 2));
     return rows.map(r => this.rowToDomain(r));
   }
 

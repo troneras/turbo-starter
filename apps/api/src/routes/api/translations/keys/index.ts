@@ -86,7 +86,8 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:update')
+      fastify.requirePermission('translations:update'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
@@ -97,7 +98,8 @@ export default async function (fastify: FastifyInstance) {
       const key = await fastify.translations.updateKey(
         keyId,
         data,
-        (request.user as any).sub
+        (request.user as any).sub,
+        request.releaseContext?.releaseId
       )
       return key
     } catch (error: any) {
@@ -121,14 +123,18 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:delete')
+      fastify.requirePermission('translations:delete'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const keyId = parseInt(id, 10)
 
     try {
-      await fastify.translations.deleteKey(keyId, (request.user as any).sub)
+      await fastify.translations.deleteKey(
+        keyId,
+        (request.user as any).sub,
+        request.releaseContext?.releaseId)
       reply.code(204)
     } catch (error: any) {
       if (error.message.includes('not found')) {
