@@ -18,7 +18,7 @@ export interface TranslationVariantDto {
   id: number;
   keyId: number;
   entityKey: string;
-  locale: string;
+  localeId: number;
   brandId?: number | null;
   value: string;
   status: VariantStatus;
@@ -39,7 +39,7 @@ type KeyPayload = {
 type VariantPayload = {
   keyId: number;
   entityKey: string;
-  locale: string;
+  localeId: number;      // Reference to locales table
   value: string;
   status: VariantStatus;
   brandId?: number | null;
@@ -50,19 +50,19 @@ type VariantPayload = {
 /* ------------------------------------------------------------------ */
 const keySpec: EntitySpec<KeyPayload> = {
   entityType: 'translation_key',
-  typedCols : ['entityKey', 'description'],                         // all fields inside payload JSON
+  typedCols: ['entityKey'],                         // all fields inside payload JSON
   uniqueKeys: ['entityKey'],
-  validate  : (draft: Partial<KeyPayload>) => {
+  validate: (draft: Partial<KeyPayload>) => {
     if (!draft.entityKey) throw new Error('entityKey required');
   }
 };
 
 const variantSpec: EntitySpec<VariantPayload> = {
   entityType: 'translation',
-  typedCols : ['entityKey', 'locale', 'status', 'brandId', 'value'],   // mapped to columns
+  typedCols: ['entityKey', 'status', 'brandId', 'localeId', 'value'],   // mapped to actual columns in entity_versions
   uniqueKeys: [],
-  validate  : (draft: Partial<VariantPayload>) => {
-    if (!draft.entityKey || !draft.locale || !draft.value) throw new Error('entityKey & locale & value required');
+  validate: (draft: Partial<VariantPayload>) => {
+    if (!draft.entityKey || !draft.localeId || !draft.value) throw new Error('entityKey & localeId & value required');
   }
 };
 
@@ -70,30 +70,33 @@ const variantSpec: EntitySpec<VariantPayload> = {
 /* 4.  Factory that plugs into Fastify                                */
 /* ------------------------------------------------------------------ */
 export function translationService(fastify: FastifyInstance) {
-  const keySvc     = fastify.entity.getService<KeyPayload>(keySpec);
+  const keySvc = fastify.entity.getService<KeyPayload>(keySpec);
   const variantSvc = fastify.entity.getService<VariantPayload>(variantSpec);
 
   /* -------------------- helpers to map Entity → DTO -------------- */
-  const iso = (d: Date) => d.toISOString();
+  const iso = (input: Date | string | number) => {
+    const date = input instanceof Date ? input : new Date(input);
+    return date.toISOString();
+  };
 
   const mapKey = (e: Entity<KeyPayload>): TranslationKeyDto => ({
-    id         : Number(e.entityId),
-    entityKey    : e.entityKey,
+    id: Number(e.entityId),
+    entityKey: e.entityKey,
     description: e.description ?? null,
-    createdBy  : e.createdBy,
-    createdAt  : iso(e.createdAt)
+    createdBy: e.createdBy,
+    createdAt: iso(e.createdAt)
   });
 
   const mapVar = (e: Entity<VariantPayload>): TranslationVariantDto => ({
-    id        : Number(e.entityId),
-    keyId     : e.keyId,
-    entityKey   : e.entityKey,
-    locale    : e.locale,
-    brandId   : e.brandId ?? null,
-    value     : e.value,
-    status    : e.status,
-    createdBy : e.createdBy,
-    createdAt : iso(e.createdAt),
+    id: Number(e.entityId),
+    keyId: e.keyId,
+    entityKey: e.entityKey,
+    localeId: e.localeId,
+    brandId: e.brandId ?? null,
+    value: e.value,
+    status: e.status,
+    createdBy: e.createdBy,
+    createdAt: iso(e.createdAt),
     approvedBy: e.status === 'APPROVED' ? e.createdBy : null,
     approvedAt: e.status === 'APPROVED' ? iso(e.createdAt) : null
   });
@@ -124,12 +127,12 @@ export function translationService(fastify: FastifyInstance) {
       userId: string,
       releaseId?: number
     ) {
-      const key = await keySvc.patch(BigInt(id), patch, { userId, releaseId });
+      const key = await keySvc.patch(id, patch, { userId, releaseId });
       return mapKey(key);
     },
 
     async deleteKey(id: number, userId: string, releaseId?: number) {
-      await keySvc.remove(BigInt(id), { userId, releaseId });
+      await keySvc.remove(id, { userId, releaseId });
     },
 
     // ── Translation Variants ──────────────────────────────────────
@@ -145,7 +148,7 @@ export function translationService(fastify: FastifyInstance) {
       data: {
         keyId: number;
         entityKey: string;
-        locale: string;
+        localeId: number;
         value: string;
         status?: VariantStatus;
         brandId?: number | null;
@@ -155,11 +158,11 @@ export function translationService(fastify: FastifyInstance) {
     ) {
       const v = await variantSvc.create(
         {
-          keyId  : data.keyId,
+          keyId: data.keyId,
           entityKey: data.entityKey,
-          locale : data.locale,
-          value  : data.value,
-          status : data.status ?? 'DRAFT',
+          localeId: data.localeId,
+          value: data.value,
+          status: data.status ?? 'DRAFT',
           brandId: data.brandId ?? null
         },
         { userId, releaseId }
@@ -173,7 +176,7 @@ export function translationService(fastify: FastifyInstance) {
       userId: string,
       releaseId?: number
     ) {
-      const v = await variantSvc.patch(BigInt(id), patch, { userId, releaseId });
+      const v = await variantSvc.patch(id, patch, { userId, releaseId });
       return mapVar(v);
     },
 
@@ -184,7 +187,7 @@ export function translationService(fastify: FastifyInstance) {
       releaseId?: number
     ) {
       const v = await variantSvc.patch(
-        BigInt(id),
+        id,
         { status },
         { userId, releaseId }
       );
@@ -192,7 +195,7 @@ export function translationService(fastify: FastifyInstance) {
     },
 
     async deleteVariant(id: number, userId: string, releaseId?: number) {
-      await variantSvc.remove(BigInt(id), { userId, releaseId });
+      await variantSvc.remove(id, { userId, releaseId });
     }
   };
 }

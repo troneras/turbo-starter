@@ -319,7 +319,7 @@ export function releasesRepository(fastify: FastifyInstance) {
     ): Promise<DiffChange[]> {
       // Build filter conditions
       const typeFilter = entityTypes?.length
-        ? sql`AND ev.entity_type = ANY(${entityTypes})`
+        ? sql`AND ev.entity_type::text = ANY(${entityTypes})`
         : sql``
 
       const brandFilter = brandIds?.length

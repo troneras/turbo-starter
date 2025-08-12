@@ -20,7 +20,7 @@ declare module 'fastify' {
  */
 export default fp(async function releaseContext(fastify: FastifyInstance) {
   // Add hook to set release context for each request
-  fastify.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       // Extract release ID from various sources (in order of precedence)
       let releaseId: number | undefined
@@ -47,7 +47,7 @@ export default fp(async function releaseContext(fastify: FastifyInstance) {
 
       // 3. Get current active/deployed release if not specified (but only for operations that need release context)
       const needsReleaseContext = !request.url.includes('/api/releases') || request.method !== 'GET'
-      
+
       if (!releaseId && needsReleaseContext) {
         releaseId = await getCurrentActiveRelease(fastify)
       }
@@ -68,26 +68,14 @@ export default fp(async function releaseContext(fastify: FastifyInstance) {
         // For preview requests, ensure user has appropriate permissions (but only when explicitly targeting a specific release)
         if (isPreview && request.user && (headerRelease || (request.query as any)?.release)) {
           // Check if user has permission to preview releases
-          let userRoles: string[] = []
-          
-          // In test mode, use roles from request.user directly
-          if (process.env.TEST_MODE === 'true' && (request.user as any).roles) {
-            userRoles = (request.user as any).roles
-          } else {
-            // In production, get roles from database
-            userRoles = await fastify.users.getUserRoles((request.user as any).sub)
-          }
-          
+          const userRoles = await fastify.users.getUserRoles((request.user as any).sub)
+
           const canPreview = userRoles.includes('admin') || userRoles.includes('editor')
 
           if (!canPreview) {
             return reply.forbidden('Insufficient permissions to preview this release')
           }
         }
-
-        // Set PostgreSQL session variable for this request
-        await fastify.releases.setActiveRelease(releaseId)
-
         // Add to request context
         request.releaseContext = {
           releaseId,

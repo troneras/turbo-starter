@@ -1,5 +1,5 @@
 CREATE TYPE "public"."entity_change_type" AS ENUM('CREATE', 'UPDATE', 'DELETE');--> statement-breakpoint
-CREATE TYPE "public"."entity_type_enum" AS ENUM('translation', 'feature_flag', 'setting', 'page', 'article', 'content', 'menu', 'navigation', 'component', 'template', 'media', 'user_preference');--> statement-breakpoint
+CREATE TYPE "public"."entity_type_enum" AS ENUM('translation', 'translation_key', 'feature_flag', 'setting', 'page', 'article', 'content', 'menu', 'navigation', 'component', 'template', 'media', 'user_preference');--> statement-breakpoint
 CREATE TYPE "public"."relation_action_type" AS ENUM('ADD', 'REMOVE');--> statement-breakpoint
 CREATE TYPE "public"."release_status" AS ENUM('OPEN', 'CLOSED', 'DEPLOYED', 'ROLLED_BACK');--> statement-breakpoint
 CREATE SEQUENCE "public"."deploy_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1;--> statement-breakpoint
@@ -180,7 +180,7 @@ CREATE TABLE "relation_versions" (
 --> statement-breakpoint
 CREATE TABLE "audit_events" (
 	"id" bigserial PRIMARY KEY NOT NULL,
-	"entity_id" bigint NOT NULL,
+	"entity_id" bigint,
 	"release_id" bigint NOT NULL,
 	"entity_type" varchar(50),
 	"operation" varchar(20) NOT NULL,
@@ -240,4 +240,5 @@ CREATE INDEX "relation_versions_relation_type_idx" ON "relation_versions" USING 
 CREATE INDEX "audit_events_entity_idx" ON "audit_events" USING btree ("entity_id","changed_at");--> statement-breakpoint
 CREATE INDEX "audit_events_release_idx" ON "audit_events" USING btree ("release_id","changed_at");--> statement-breakpoint
 CREATE INDEX "audit_events_user_idx" ON "audit_events" USING btree ("changed_by","changed_at");--> statement-breakpoint
-CREATE VIEW "public"."v_entities" AS (select "id", "entity_id", "release_id", "entity_type", "entity_key", "brand_id", "jurisdiction_id", "locale_id", "parent_entity_id", "value", "status", "published_at", "is_deleted", "payload", "change_type", "change_set_id", "change_reason", "created_by", "created_at" from "entity_versions");
+CREATE VIEW "public"."v_active_entities" AS (select "entity_versions"."id", "entity_versions"."entity_id", "entity_versions"."entity_type", "entity_versions"."entity_key", "entity_versions"."value", "entity_versions"."status", "entity_versions"."created_at" from "entity_versions" inner join "releases" on "entity_versions"."release_id" = "releases"."id" where "releases"."status" = 'OPEN');--> statement-breakpoint
+CREATE VIEW "public"."v_entities" AS (select "entity_versions"."id", "entity_versions"."entity_id", "entity_versions"."release_id", "entity_versions"."entity_type", "entity_versions"."entity_key", "entity_versions"."brand_id", "entity_versions"."jurisdiction_id", "entity_versions"."locale_id", "entity_versions"."parent_entity_id", "entity_versions"."value", "entity_versions"."status", "entity_versions"."published_at", "entity_versions"."is_deleted", "entity_versions"."payload", "entity_versions"."change_type", "entity_versions"."change_set_id", "entity_versions"."change_reason", "entity_versions"."created_by", "entity_versions"."created_at", CASE WHEN "releases"."status" = 'OPEN' THEN true ELSE false END as "is_from_active_release" from "entity_versions" left join "releases" on "entity_versions"."release_id" = "releases"."id");

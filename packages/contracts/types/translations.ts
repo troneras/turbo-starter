@@ -64,7 +64,7 @@ export type TranslationKey = Static<typeof TranslationKeySchema>
  *   id: 456,
  *   keyId: 123,
  *   entityKey: "checkout.button.confirm",
- *   locale: "en-US",
+ *   localeId: 1, // Reference to locales table
  *   brandId: null, // Generic translation
  *   value: "Confirm Order",
  *   status: "APPROVED",
@@ -76,7 +76,7 @@ export type TranslationKey = Static<typeof TranslationKeySchema>
  *   createdAt: "2025-07-30T10:00:00Z",
  *   approvedBy: "660e8400-e29b-41d4-a716-446655440001",
  *   approvedAt: "2025-07-30T11:00:00Z"
- * }
+ *   }
  * ```
  */
 export type TranslationVariant = Static<typeof TranslationVariantSchema>

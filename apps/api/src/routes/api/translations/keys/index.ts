@@ -50,7 +50,8 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:create')
+      fastify.requirePermission('translations:create'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const data = request.body as CreateTranslationKeyRequest
@@ -58,7 +59,8 @@ export default async function (fastify: FastifyInstance) {
     try {
       const key = await fastify.translations.createKey(
         { entityKey: data.entityKey, description: data.description ?? null },
-        (request.user as any).sub
+        (request.user as any).sub,
+        request.releaseContext?.releaseId
       )
       reply.code(201)
       return key

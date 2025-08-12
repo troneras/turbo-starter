@@ -59,15 +59,77 @@ export default async function serviceApp(fastify: FastifyInstance, opts: Fastify
             'Unhandled error occurred'
         )
 
-        const statusCode = err.statusCode ?? 500
-        reply.code(statusCode)
-
+        // Default values
+        let statusCode = (err as any).statusCode ?? 500
         let message = 'Internal Server Error'
         let error = 'Internal Server Error'
-        
-        if (statusCode < 500) {
+
+        // Extract database error details if present (drizzle/postgres)
+        const anyErr: any = err
+        const pgErr: any = anyErr?.cause ?? anyErr?.originalError ?? anyErr?.parent
+        const pgCode: string | undefined = pgErr?.code
+        const pgConstraint: string | undefined = pgErr?.constraint
+        const pgMessage: string | undefined = pgErr?.message
+
+        // Map well-known database errors to friendly client responses
+        if (pgCode === 'P0001' && /Cannot modify entities in .* release/.test(pgMessage ?? '')) {
+            // Business rule from trigger: closed/deployed releases are immutable
+            statusCode = 409
+            error = 'Conflict'
+            message = 'This release cannot be modified. Create or select an OPEN release to make changes.'
+        } else if (pgCode === '23505') {
+            // Unique violation
+            statusCode = 409
+            error = 'Conflict'
+            if (pgConstraint === 'uq_translation_key_locale_release') {
+                message = 'A translation for this key and locale already exists in the current release.'
+            } else if (pgConstraint === 'uq_relation_versions_unique') {
+                message = 'This relation already exists in the current release.'
+            } else {
+                message = 'Duplicate resource.'
+            }
+        } else if (pgCode === '23514') {
+            // Check constraint violation
+            statusCode = 400
+            error = 'Bad Request'
+            switch (pgConstraint) {
+                case 'releases_status_valid':
+                    message = 'Invalid release status.'
+                    break
+                case 'entity_versions_change_type_valid':
+                    message = 'Invalid change type.'
+                    break
+                case 'relation_versions_action_valid':
+                    message = 'Invalid relation action.'
+                    break
+                case 'releases_deployseq_status_ck':
+                    message = 'deploy_seq must be set only for DEPLOYED releases and vice versa.'
+                    break
+                case 'ck_entity_key_required':
+                    message = 'entityKey is required for this entity type.'
+                    break
+                case 'ck_translation_locale_required':
+                    message = 'localeId is required for translations.'
+                    break
+                case 'check_translation_status':
+                    message = 'Invalid translation status.'
+                    break
+                default:
+                    message = 'Invalid data.'
+            }
+        } else if (pgCode === '23503') {
+            // Foreign key violation
+            statusCode = 400
+            error = 'Bad Request'
+            message = 'Invalid reference to a related resource.'
+        } else if (anyErr?.message?.includes('Duplicate entity for given keys')) {
+            // Application-level uniqueness pre-check
+            statusCode = 409
+            error = 'Conflict'
+            message = 'Resource already exists for the provided key(s).'
+        } else if (statusCode < 500) {
+            // Preserve provided client error codes
             message = err.message
-            // Map status codes to error names
             switch (statusCode) {
                 case 400:
                     error = 'Bad Request'
@@ -92,10 +154,11 @@ export default async function serviceApp(fastify: FastifyInstance, opts: Fastify
             message = err.message || 'Internal Server Error'
         }
 
-        return { 
+        reply.code(statusCode)
+        return {
             statusCode,
             error,
-            message 
+            message
         }
     })
 

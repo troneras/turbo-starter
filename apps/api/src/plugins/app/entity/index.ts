@@ -7,7 +7,6 @@ import {
   eq
 } from 'drizzle-orm';
 import * as schema from '@cms/db/schema';
-import { entityTypeEnum } from '@cms/db/schema/enums';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -21,8 +20,8 @@ type DB = PostgresJsDatabase<typeof schema>;
 /* 1. shared types                                                    */
 /* ------------------------------------------------------------------ */
 type CoreCols = {
-  entityId: bigint;
-  releaseId: bigint;
+  entityId: number;
+  releaseId: number;
   entityType: string;
   createdBy: string;
   createdAt: Date;
@@ -55,7 +54,7 @@ async function withRelease<T>(
     const openRelease = await db.execute(sql`
       SELECT id FROM releases WHERE status = 'OPEN' ORDER BY created_at DESC LIMIT 1
     `);
-    
+
     if (openRelease.length > 0) {
       rel = Number(openRelease[0]?.id);
     } else {
@@ -65,11 +64,12 @@ async function withRelease<T>(
           .at(0)?.get_latest_deployed_release
       );
     }
+
   }
 
   await db.execute(sql`SELECT set_active_release(${rel})`);
-  try      { return await fn(); }
-  finally  { await db.execute(sql`SELECT set_active_release(NULL)`); }
+  try { return await fn(); }
+  finally { await db.execute(sql`SELECT set_active_release(NULL)`); }
 }
 
 function bigintToNum(value: unknown): number {
@@ -81,7 +81,7 @@ function bigintToNum(value: unknown): number {
 /* 3. core service                                                    */
 /* ------------------------------------------------------------------ */
 export class EntityService<P extends EntityPayload> {
-  constructor(private db: DB, private spec: EntitySpec<P>) {}
+  constructor(private db: DB, private spec: EntitySpec<P>) { }
 
   /* ---------- private helpers ------------------ */
   private fieldToColumn(fieldName: string): string {
@@ -91,15 +91,18 @@ export class EntityService<P extends EntityPayload> {
 
   private rowToDomain(row: any): Entity<P> {
     const payload: any = row.payload ?? {};
-    const typed: any   = {};
-    this.spec.typedCols.forEach(col => { typed[col] = row[col]; });
+    const typed: any = {};
+    this.spec.typedCols.forEach((col) => {
+      const columnName = this.fieldToColumn(col as string);
+      typed[col] = row[columnName];
+    });
     return {
-      entityId   : bigintToNum(row.entity_id),
-      releaseId  : bigintToNum(row.release_id),
-      entityType : row.entity_type,
-      createdBy  : row.created_by,
-      createdAt  : row.created_at,
-      isDeleted  : row.is_deleted,
+      entityId: bigintToNum(row.entity_id),
+      releaseId: bigintToNum(row.release_id),
+      entityType: row.entity_type,
+      createdBy: row.created_by,
+      createdAt: row.created_at,
+      isDeleted: row.is_deleted,
       ...payload,
       ...typed
     };
@@ -107,7 +110,7 @@ export class EntityService<P extends EntityPayload> {
 
   private async assertUnique(draft: P, releaseId?: number) {
     if (!this.spec.uniqueKeys?.length) return;
-    
+
     const conds = this.spec.uniqueKeys.map(k => {
       const columnName = this.fieldToColumn(k as string);
       return sql`${sql.raw(columnName)} = ${draft[k]}`;
@@ -116,7 +119,7 @@ export class EntityService<P extends EntityPayload> {
     const exists = await withRelease(this.db, releaseId, () =>
       this.db.execute(sql`
         SELECT 1 FROM v_entities
-        WHERE entity_type = ${this.spec.entityType}
+        WHERE entity_type::text = ${this.spec.entityType}
           AND ${sql.join(conds, sql` AND `)}
         LIMIT 1
       `)
@@ -143,11 +146,10 @@ export class EntityService<P extends EntityPayload> {
 
     const { json, cols } = this.splitPayload(draft);
 
-    return withRelease(this.db, opts.releaseId, async () => {
-      const [row] = await this.db.execute(sql`
+    const [row] = await this.db.execute(sql`
         WITH new_e AS (
           INSERT INTO ${schema.entities} (entity_type)
-          VALUES (${this.spec.entityType})
+          VALUES (${this.spec.entityType}::entity_type_enum)
           RETURNING id
         ),
         new_v AS (
@@ -158,8 +160,8 @@ export class EntityService<P extends EntityPayload> {
           )
           SELECT
             id,
-            get_active_release(),
-            ${this.spec.entityType},
+            ${opts.releaseId},
+            ${this.spec.entityType}::entity_type_enum,
             ${sql.join(Object.values(cols), sql`, `)},
             ${JSON.stringify(json)}::jsonb,
             'CREATE',
@@ -169,13 +171,12 @@ export class EntityService<P extends EntityPayload> {
         )
         SELECT * FROM new_v;
       `);
-      return this.rowToDomain(row);
-    });
+    return this.rowToDomain(row);
   }
 
   /** patch existing logical entity – always INSERT new version row */
   async patch(
-    entityId: bigint,
+    entityId: number,
     patch: Partial<P>,
     opts: { userId: string; releaseId?: number }
   ): Promise<Entity<P>> {
@@ -192,7 +193,7 @@ export class EntityService<P extends EntityPayload> {
         SELECT
           ${entityId},
           get_active_release(),
-          ${this.spec.entityType},
+          ${this.spec.entityType}::entity_type_enum,
           ${sql.join(Object.values(cols), sql`, `)},
           COALESCE(
             (SELECT payload FROM v_entities WHERE entity_id = ${entityId}) || 
@@ -209,7 +210,7 @@ export class EntityService<P extends EntityPayload> {
   }
 
   /** soft-delete a logical entity */
-  async remove(entityId: bigint, opts: { userId: string; releaseId?: number }): Promise<void> {
+  async remove(entityId: number, opts: { userId: string; releaseId?: number }): Promise<void> {
     await withRelease(this.db, opts.releaseId, () =>
       this.db.execute(sql`
         INSERT INTO ${schema.entityVersions} (
@@ -219,7 +220,7 @@ export class EntityService<P extends EntityPayload> {
         SELECT
           ${entityId},
           get_active_release(),
-          ${this.spec.entityType},
+          ${this.spec.entityType}::entity_type_enum,
           payload, 'DELETE', true, ${opts.userId}
         FROM v_entities
         WHERE entity_id = ${entityId}
@@ -232,19 +233,19 @@ export class EntityService<P extends EntityPayload> {
     const conds = [sql`entity_type = ${this.spec.entityType}`];
     Object.entries(filter).forEach(([k, v]) => {
       const columnName = this.fieldToColumn(k);
-      conds.push(sql.raw(`${columnName} = ?`, [v]));
+      conds.push(sql`${sql.raw(columnName)} = ${v}`);
     });
 
-    const rows = await withRelease(this.db, ctx.releaseId, () =>
-      this.db.execute(sql`
-        SELECT * FROM v_entities
-        WHERE ${sql.join(conds, sql` AND `)}
-      `)
-    );
+    const rows = await this.db.execute(sql`
+      SELECT * FROM v_entities
+      WHERE ${sql.join(conds, sql` AND `)}
+    `);
+    // Print the Postgres row list in a human-readable format
+    console.log('Postgres rows:', JSON.stringify(rows, null, 2));
     return rows.map(r => this.rowToDomain(r));
   }
 
-  async get(entityId: bigint, ctx: { releaseId?: number } = {}): Promise<Entity<P> | null> {
+  async get(entityId: number, ctx: { releaseId?: number } = {}): Promise<Entity<P> | null> {
     const [row] = await withRelease(this.db, ctx.releaseId, () =>
       this.db.execute(sql`
         SELECT * FROM v_entities

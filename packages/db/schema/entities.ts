@@ -60,7 +60,7 @@ export const entityVersions = pgTable(
     primaryKey({ columns: [table.id] }),
     unique().on(table.entityId, table.releaseId),
     index('entity_versions_entity_type_idx').on(table.entityType),
-    
+
     index('entity_versions_brand_idx').on(table.brandId),
     index('entity_versions_release_idx').on(table.releaseId),
     index('entity_versions_entity_release_optimized_idx').on(table.entityId, table.releaseId),

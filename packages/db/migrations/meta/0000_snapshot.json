@@ -1,5 +1,5 @@
 {
-  "id": "e71832db-8393-48d1-ac66-e6137921254c",
+  "id": "fdf9be26-c6ba-41e5-b5c2-0551724d5eeb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1653,7 +1653,7 @@
           "name": "entity_id",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "release_id": {
           "name": "release_id",
@@ -1845,6 +1845,7 @@
       "schema": "public",
       "values": [
         "translation",
+        "translation_key",
         "feature_flag",
         "setting",
         "page",
@@ -1893,6 +1894,60 @@
   "roles": {},
   "policies": {},
   "views": {
+    "public.v_active_entities": {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "entity_type_enum",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_key": {
+          "name": "entity_key",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'DRAFT'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "definition": "select \"entity_versions\".\"id\", \"entity_versions\".\"entity_id\", \"entity_versions\".\"entity_type\", \"entity_versions\".\"entity_key\", \"entity_versions\".\"value\", \"entity_versions\".\"status\", \"entity_versions\".\"created_at\" from \"entity_versions\" inner join \"releases\" on \"entity_versions\".\"release_id\" = \"releases\".\"id\" where \"releases\".\"status\" = 'OPEN'",
+      "name": "v_active_entities",
+      "schema": "public",
+      "isExisting": false,
+      "materialized": false
+    },
     "public.v_entities": {
       "columns": {
         "id": {
@@ -2016,7 +2071,7 @@
           "default": "now()"
         }
       },
-      "definition": "select \"id\", \"entity_id\", \"release_id\", \"entity_type\", \"entity_key\", \"brand_id\", \"jurisdiction_id\", \"locale_id\", \"parent_entity_id\", \"value\", \"status\", \"published_at\", \"is_deleted\", \"payload\", \"change_type\", \"change_set_id\", \"change_reason\", \"created_by\", \"created_at\" from \"entity_versions\"",
+      "definition": "select \"entity_versions\".\"id\", \"entity_versions\".\"entity_id\", \"entity_versions\".\"release_id\", \"entity_versions\".\"entity_type\", \"entity_versions\".\"entity_key\", \"entity_versions\".\"brand_id\", \"entity_versions\".\"jurisdiction_id\", \"entity_versions\".\"locale_id\", \"entity_versions\".\"parent_entity_id\", \"entity_versions\".\"value\", \"entity_versions\".\"status\", \"entity_versions\".\"published_at\", \"entity_versions\".\"is_deleted\", \"entity_versions\".\"payload\", \"entity_versions\".\"change_type\", \"entity_versions\".\"change_set_id\", \"entity_versions\".\"change_reason\", \"entity_versions\".\"created_by\", \"entity_versions\".\"created_at\", CASE WHEN \"releases\".\"status\" = 'OPEN' THEN true ELSE false END as \"is_from_active_release\" from \"entity_versions\" left join \"releases\" on \"entity_versions\".\"release_id\" = \"releases\".\"id\"",
       "name": "v_entities",
       "schema": "public",
       "isExisting": false,

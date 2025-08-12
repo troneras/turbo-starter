@@ -17,7 +17,7 @@ const ParamsSchema = Type.Object({
 
 const QuerySchema = Type.Object({
   entityKey: Type.Optional(Type.String()),
-  locale: Type.Optional(Type.String()),
+  localeId: Type.Optional(Type.Number()),
   brandId: Type.Optional(Type.Number()),
   status: Type.Optional(Type.Union([
     Type.Literal('DRAFT'),
@@ -40,16 +40,16 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
   }, async (request) => {
-    const { entityKey, locale, brandId, status } = request.query as {
+    const { entityKey, localeId, brandId, status } = request.query as {
       entityKey?: string
-      locale?: string
+      localeId?: number
       brandId?: number
       status?: 'DRAFT' | 'PENDING' | 'APPROVED'
     }
 
     return fastify.translations.listVariants({
       entityKey,
-      locale,
+      localeId,
       brandId,
       status
     })
@@ -77,7 +77,7 @@ export default async function (fastify: FastifyInstance) {
       const variant = await fastify.translations.createVariant(
         {
           entityKey: data.entityKey,
-          locale: data.locale,
+          localeId: data.localeId,
           value: data.value,
           status: data.status ?? 'DRAFT',
           brandId: data.brandId ?? null,
