@@ -45,7 +45,7 @@ export type Entity<P> = CoreCols & P;
 async function withRelease<T>(
   db: DB,
   releaseId: number | undefined,
-  fn: () => Promise<T>
+  fn: (tx: any, releaseId: number) => Promise<T>
 ): Promise<T> {
   // Default to OPEN release for modifications, latest deployed for reads
   let rel = releaseId;
@@ -64,12 +64,25 @@ async function withRelease<T>(
           .at(0)?.get_latest_deployed_release
       );
     }
-
   }
 
-  await db.execute(sql`SELECT set_active_release(${rel})`);
-  try { return await fn(); }
-  finally { await db.execute(sql`SELECT set_active_release(NULL)`); }
+  if (!rel) {
+    throw new Error('No valid release found for operation');
+  }
+
+  // Use a transaction to ensure all operations happen on the same connection
+  return await db.transaction(async (tx) => {
+    // Set the active release within the transaction
+    await tx.execute(sql`SELECT set_active_release(${rel})`);
+
+    try {
+      // Pass the transaction and release ID to the function
+      return await fn(tx, rel);
+    } finally {
+      // Clean up (though transaction end will handle this anyway)
+      await tx.execute(sql`SELECT set_active_release(NULL)`);
+    }
+  });
 }
 
 function bigintToNum(value: unknown): number {
@@ -116,15 +129,15 @@ export class EntityService<P extends EntityPayload> {
       return sql`${sql.raw(columnName)} = ${draft[k]}`;
     });
 
-    const exists = await withRelease(this.db, releaseId, () =>
-      this.db.execute(sql`
+    const exists = await withRelease(this.db, releaseId, (tx, releaseId) =>
+      tx.execute(sql`
         SELECT 1 FROM v_entities
         WHERE entity_type::text = ${this.spec.entityType}
           AND ${sql.join(conds, sql` AND `)}
         LIMIT 1
       `)
     );
-    if (exists.length) throw new Error('Duplicate entity for given keys');
+    if ((exists as any[]).length) throw new Error('Duplicate entity for given keys');
   }
 
   private splitPayload(draft: Partial<P>) {
@@ -183,7 +196,7 @@ export class EntityService<P extends EntityPayload> {
     if (!Object.keys(patch).length) throw new Error('empty patch');
     const { json, cols } = this.splitPayload(patch);
 
-    return withRelease(this.db, opts.releaseId, async () => {
+    return withRelease(this.db, opts.releaseId, async (tx, releaseId) => {
       // Perform in-place UPDATE of the current version within the active release
       const assignments = [
         // update typed columns only if provided
@@ -196,11 +209,11 @@ export class EntityService<P extends EntityPayload> {
         sql`change_type = 'UPDATE'`
       ];
 
-      const [row] = await this.db.execute(sql`
+      const [row] = await tx.execute(sql`
         UPDATE ${schema.entityVersions}
         SET ${sql.join(assignments, sql`, `)}
         WHERE entity_id = ${entityId}
-          AND release_id = get_active_release()
+          AND release_id = ${releaseId}
           AND entity_type = ${this.spec.entityType}::entity_type_enum
         RETURNING *;
       `);
@@ -211,15 +224,15 @@ export class EntityService<P extends EntityPayload> {
 
   /** soft-delete a logical entity */
   async remove(entityId: number, opts: { userId: string; releaseId?: number }): Promise<void> {
-    await withRelease(this.db, opts.releaseId, () =>
-      this.db.execute(sql`
+    await withRelease(this.db, opts.releaseId, (tx, releaseId) =>
+      tx.execute(sql`
         INSERT INTO ${schema.entityVersions} (
           entity_id, release_id, entity_type,
           payload, change_type, is_deleted, created_by
         )
         SELECT
           ${entityId},
-          get_active_release(),
+          ${releaseId},
           ${this.spec.entityType}::entity_type_enum,
           payload, 'DELETE', true, ${opts.userId}
         FROM v_entities
@@ -245,14 +258,15 @@ export class EntityService<P extends EntityPayload> {
   }
 
   async get(entityId: number, ctx: { releaseId?: number } = {}): Promise<Entity<P> | null> {
-    const [row] = await withRelease(this.db, ctx.releaseId, () =>
-      this.db.execute(sql`
+    const result = await withRelease(this.db, ctx.releaseId, (tx, releaseId) =>
+      tx.execute(sql`
         SELECT * FROM v_entities
         WHERE entity_id = ${entityId}
           AND entity_type = ${this.spec.entityType}
         LIMIT 1
       `)
     );
+    const [row] = result as any[];
     return row ? this.rowToDomain(row) : null;
   }
 }

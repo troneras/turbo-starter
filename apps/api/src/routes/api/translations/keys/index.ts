@@ -103,6 +103,7 @@ export default async function (fastify: FastifyInstance) {
       )
       return key
     } catch (error: any) {
+      console.log('error', error.message)
       if (error.message.includes('not found')) {
         return reply.notFound('Translation key not found')
       }
