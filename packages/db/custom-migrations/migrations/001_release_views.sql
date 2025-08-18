@@ -73,11 +73,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- Simplified canonical view for entities based on active release
--- For now, just return all entity_versions for testing
+
+-- Optimized canonical view for entities based on active release
 CREATE OR REPLACE VIEW v_entities AS
-SELECT 
+WITH active_release AS (
+  SELECT id, deploy_seq
+  FROM releases
+  WHERE id = current_setting('cms.active_release', true)::bigint
+  LIMIT 1
+)
+SELECT DISTINCT ON (ev.entity_id)
   ev.*,
-  false AS is_from_active_release
-FROM entity_versions ev;
+  (ev.release_id = ar.id) AS is_from_active_release
+FROM entity_versions ev
+INNER JOIN releases r ON r.id = ev.release_id
+CROSS JOIN active_release ar
+WHERE 
+  ev.release_id = ar.id  -- Direct match with active release
+  OR (
+    r.status = 'DEPLOYED' 
+    AND r.deploy_seq IS NOT NULL
+    AND (ar.deploy_seq IS NULL OR r.deploy_seq <= ar.deploy_seq)
+    -- Include if from a deployed release before or at the active release's deploy point
+  )
+ORDER BY 
+  ev.entity_id,
+  (ev.release_id = ar.id) DESC,  -- Prioritize active release
+  r.deploy_seq DESC;  -- Then most recent deployed
 
