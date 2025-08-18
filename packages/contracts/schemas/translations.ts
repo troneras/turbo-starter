@@ -29,8 +29,7 @@ export const TranslationKeySchema = Type.Object({
 // Translation variant schema
 export const TranslationVariantSchema = Type.Object({
   id: Type.Number({ description: "Entity ID of the translation" }),
-  keyId: Type.Number({ description: "ID of the parent translation key" }),
-  entityKey: Type.String({ description: "Copy of the key for easier queries" }),
+  entityKey: Type.String({ description: "The translation key this variant belongs to" }),
   localeId: Type.Number({
     description: "Locale ID referencing the locales table"
   }),
@@ -80,13 +79,10 @@ export const UpdateTranslationKeyRequestSchema = Type.Object({
 })
 
 export const CreateTranslationVariantRequestSchema = Type.Object({
-  entityKey: Type.Optional(Type.String({
+  entityKey: Type.String({
     pattern: "^[a-z0-9_.]+$",
-    description: "Translation key to create variant for (either entityKey or keyId is required)"
-  })),
-  keyId: Type.Optional(Type.Number({
-    description: "ID of the translation key (either entityKey or keyId is required)"
-  })),
+    description: "Translation key to create variant for"
+  }),
   localeId: Type.Number({
     description: "Locale ID referencing the locales table"
   }),
@@ -98,14 +94,14 @@ export const CreateTranslationVariantRequestSchema = Type.Object({
   status: Type.Optional(TranslationStatus),
 }, {
   additionalProperties: false,
-  description: "Request to create a new translation variant (either entityKey or keyId must be provided)"
+  description: "Request to create a new translation variant"
 })
 
 export const UpdateTranslationVariantRequestSchema = Type.Object({
-  value: Type.String({
+  value: Type.Optional(Type.String({
     maxLength: 1024,
     description: "Updated translation text"
-  }),
+  })),
   status: Type.Optional(TranslationStatus),
 }, {
   additionalProperties: false,

@@ -205,7 +205,7 @@ export class EntityService<P extends EntityPayload> {
             ${this.spec.entityType}::entity_type_enum,
             ${sql.join(Object.values(cols), sql`, `)},
             ${JSON.stringify(json)}::jsonb,
-            'CREATE',
+            'CREATE'::entity_change_type,
             ${opts.userId}
           FROM new_e
           RETURNING *
@@ -217,38 +217,118 @@ export class EntityService<P extends EntityPayload> {
     });
   }
 
-  /** patch existing logical entity – always INSERT new version row */
+  /** patch existing logical entity – INSERT new version or UPDATE existing version in same release */
   async patch(
     entityId: number,
     patch: Partial<P>,
     opts: { userId: string; releaseId?: number }
   ): Promise<Entity<P>> {
     if (!Object.keys(patch).length) throw new Error('empty patch');
+    console.log('patch', patch);
     const { json, cols } = this.splitPayload(patch);
 
     return withRelease(this.db, opts.releaseId, async (tx, releaseId) => {
-      // Perform in-place UPDATE of the current version within the active release
-      const assignments = [
-        // update typed columns only if provided
-        ...Object.keys(cols).map((k) => {
-          const colName = this.fieldToColumn(k);
-          return sql`${sql.raw(colName)} = ${cols[k as keyof typeof cols]}`;
-        }),
-        // merge json payload
-        sql`payload = COALESCE(payload, '{}'::jsonb) || ${JSON.stringify(json)}::jsonb`,
-        sql`change_type = 'UPDATE'`
-      ];
-
-      const [row] = await tx.execute(sql`
-        UPDATE ${schema.entityVersions}
-        SET ${sql.join(assignments, sql`, `)}
+      // Check if there's already a version in this release for this entity
+      const existingVersionResult = await tx.execute(sql`
+        SELECT entity_id, change_type, payload
+        FROM ${schema.entityVersions}
         WHERE entity_id = ${entityId}
           AND release_id = ${releaseId}
           AND entity_type = ${this.spec.entityType}::entity_type_enum
-        RETURNING *;
+        LIMIT 1
       `);
-      if (!row) throw new Error('entity not found');
-      return this.rowToDomain(row);
+
+      const existingVersion = (existingVersionResult as any[])[0];
+
+      if (existingVersion) {
+
+        console.log('existingVersion', existingVersion);
+        console.log('cols', cols);
+        console.log('json', json);
+
+        // UPDATE existing version in the same release
+        const assignments = [
+          // update typed columns only if provided
+          ...Object.keys(cols).map((k) => {
+            const colName = this.fieldToColumn(k);
+            return sql`${sql.raw(colName)} = ${cols[k as keyof typeof cols]}`;
+          }),
+          // merge json payload
+          sql`payload = COALESCE(payload, '{}'::jsonb) || ${JSON.stringify(json)}::jsonb`,
+          // Only change to 'UPDATE' if it wasn't originally a 'CREATE'
+          sql`change_type = CASE 
+                WHEN change_type = 'CREATE' THEN 'CREATE'::entity_change_type
+                ELSE 'UPDATE'::entity_change_type
+              END`
+        ];
+
+        const [row] = await tx.execute(sql`
+          UPDATE ${schema.entityVersions}
+          SET ${sql.join(assignments, sql`, `)}
+          WHERE entity_id = ${entityId}
+            AND release_id = ${releaseId}
+            AND entity_type = ${this.spec.entityType}::entity_type_enum
+          RETURNING *;
+        `);
+
+        if (!row) throw new Error('entity not found');
+        return this.rowToDomain(row);
+      } else {
+        // INSERT new version for this release (audit trail)
+        // Get the current state to merge with the patch
+        const currentStateResult = await tx.execute(sql`
+          SELECT *
+          FROM v_entities
+          WHERE entity_id = ${entityId}
+            AND entity_type = ${this.spec.entityType}
+          LIMIT 1
+        `);
+
+        const currentState = (currentStateResult as any[])[0];
+        if (!currentState) {
+          throw new Error('entity not found');
+        }
+
+        // Build the column assignments for INSERT
+        const allTypedCols = this.spec.typedCols;
+        const insertCols = allTypedCols.map(col => sql.raw(this.fieldToColumn(col as string)));
+        const insertValues = allTypedCols.map(col => {
+          // Use the patch value if provided, otherwise use current value
+          if (cols.hasOwnProperty(col)) {
+            return cols[col as string];
+          } else {
+            const columnName = this.fieldToColumn(col as string);
+            return currentState[columnName];
+          }
+        });
+
+        // Merge JSON payload
+        const mergedPayload = {
+          ...(currentState.payload || {}),
+          ...json
+        };
+
+        const [row] = await tx.execute(sql`
+          INSERT INTO ${schema.entityVersions} (
+            entity_id, release_id, entity_type,
+            ${sql.join(insertCols, sql`, `)},
+            payload, change_type, created_by
+          )
+          VALUES (
+            ${entityId},
+            ${releaseId},
+            ${this.spec.entityType}::entity_type_enum,
+            ${sql.join(insertValues, sql`, `)},
+            ${JSON.stringify(mergedPayload)}::jsonb,
+            'UPDATE'::entity_change_type,
+            ${opts.userId}
+          )
+          RETURNING *;
+        `);
+
+        if (!row) throw new Error('failed to create new version');
+        return this.rowToDomain(row);
+      }
     });
   }
 
@@ -264,7 +344,7 @@ export class EntityService<P extends EntityPayload> {
           ${entityId},
           ${releaseId},
           ${this.spec.entityType}::entity_type_enum,
-          payload, 'DELETE', true, ${opts.userId}
+          payload, 'DELETE'::entity_change_type, true, ${opts.userId}
         FROM v_entities
         WHERE entity_id = ${entityId}
       `)

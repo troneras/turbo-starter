@@ -34,7 +34,7 @@ export default async function (fastify: FastifyInstance) {
         200: createPaginatedResponseSchema(TranslationVariantSchema)
       }
     },
-    onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
+    onRequest: [fastify.authenticate, fastify.requirePermission('translations:read'), fastify.requireReleaseContext]
   }, async (request) => {
     const { entityKey, localeId, brandId, status, page, pageSize } = request.query as {
       entityKey?: string
@@ -53,6 +53,7 @@ export default async function (fastify: FastifyInstance) {
         status
       },
       {
+        releaseId: request.releaseContext?.releaseId,
         page,
         pageSize
       }
@@ -78,15 +79,9 @@ export default async function (fastify: FastifyInstance) {
   }, async (request, reply) => {
     const data = request.body as CreateTranslationVariantRequest
 
-    // Validate that at least one identifier is provided
-    if (!data.keyId && !data.entityKey) {
-      return reply.badRequest('Either keyId or entityKey must be provided')
-    }
-
     try {
       const variant = await fastify.translations.createVariant(
         {
-          keyId: data.keyId,
           entityKey: data.entityKey,
           localeId: data.localeId,
           value: data.value,
@@ -107,12 +102,6 @@ export default async function (fastify: FastifyInstance) {
       }
       if (error.message.includes('Translation key not found') || error.message.includes('key not found')) {
         return reply.badRequest('Translation key does not exist')
-      }
-      if (error.message.includes('Entity key does not match')) {
-        return reply.badRequest('Entity key does not match the specified key ID')
-      }
-      if (error.message.includes('Either keyId or entityKey must be provided')) {
-        return reply.badRequest('Either keyId or entityKey must be provided')
       }
       throw error
     }
