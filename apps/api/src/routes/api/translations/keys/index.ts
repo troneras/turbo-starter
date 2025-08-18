@@ -1,9 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 import {
   TranslationKeySchema,
+  TranslationKeyQuerySchema,
   CreateTranslationKeyRequestSchema,
   UpdateTranslationKeyRequestSchema
 } from '@cms/contracts/schemas/translations'
+import {
+  createPaginatedResponseSchema
+} from '@cms/contracts/schemas/common'
 import type {
   TranslationKey,
   CreateTranslationKeyRequest,
@@ -15,12 +19,8 @@ const ParamsSchema = Type.Object({
   id: Type.String({ pattern: '^[0-9]+$' })
 })
 
-const QuerySchema = Type.Object({
-  parentPath: Type.Optional(Type.String()),
-  depth: Type.Optional(Type.Number({ minimum: 1, default: 1 })),
-  page: Type.Optional(Type.Number({ minimum: 1, default: 1 })),
-  pageSize: Type.Optional(Type.Number({ minimum: 1, maximum: 500, default: 100 }))
-})
+// Using the reusable query schema from contracts
+const QuerySchema = TranslationKeyQuerySchema
 
 export default async function (fastify: FastifyInstance) {
   // Get all translation keys
@@ -31,17 +31,7 @@ export default async function (fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       querystring: QuerySchema,
       response: {
-        200: Type.Object({
-          data: Type.Array(TranslationKeySchema),
-          pagination: Type.Object({
-            page: Type.Number(),
-            pageSize: Type.Number(),
-            totalItems: Type.Number(),
-            totalPages: Type.Number(),
-            hasNextPage: Type.Boolean(),
-            hasPreviousPage: Type.Boolean()
-          })
-        })
+        200: createPaginatedResponseSchema(TranslationKeySchema)
       }
     },
     onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]

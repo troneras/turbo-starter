@@ -1,9 +1,13 @@
 import type { FastifyInstance } from 'fastify'
 import {
   TranslationVariantSchema,
+  TranslationVariantQuerySchema,
   CreateTranslationVariantRequestSchema,
   UpdateTranslationVariantRequestSchema
 } from '@cms/contracts/schemas/translations'
+import {
+  createPaginatedResponseSchema
+} from '@cms/contracts/schemas/common'
 import type {
   TranslationVariant,
   CreateTranslationVariantRequest,
@@ -15,18 +19,8 @@ const ParamsSchema = Type.Object({
   id: Type.String({ pattern: '^[0-9]+$' })
 })
 
-const QuerySchema = Type.Object({
-  entityKey: Type.Optional(Type.String()),
-  localeId: Type.Optional(Type.Number()),
-  brandId: Type.Optional(Type.Number()),
-  status: Type.Optional(Type.Union([
-    Type.Literal('DRAFT'),
-    Type.Literal('PENDING'),
-    Type.Literal('APPROVED')
-  ])),
-  page: Type.Optional(Type.Number({ minimum: 1, default: 1 })),
-  pageSize: Type.Optional(Type.Number({ minimum: 1, maximum: 500, default: 100 }))
-})
+// Using the reusable query schema from contracts
+const QuerySchema = TranslationVariantQuerySchema
 
 export default async function (fastify: FastifyInstance) {
   // Get translation variants
@@ -37,17 +31,7 @@ export default async function (fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       querystring: QuerySchema,
       response: {
-        200: Type.Object({
-          data: Type.Array(TranslationVariantSchema),
-          pagination: Type.Object({
-            page: Type.Number(),
-            pageSize: Type.Number(),
-            totalItems: Type.Number(),
-            totalPages: Type.Number(),
-            hasNextPage: Type.Boolean(),
-            hasPreviousPage: Type.Boolean()
-          })
-        })
+        200: createPaginatedResponseSchema(TranslationVariantSchema)
       }
     },
     onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
@@ -88,22 +72,29 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:create')
+      fastify.requirePermission('translations:create'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const data = request.body as CreateTranslationVariantRequest
 
+    // Validate that at least one identifier is provided
+    if (!data.keyId && !data.entityKey) {
+      return reply.badRequest('Either keyId or entityKey must be provided')
+    }
+
     try {
       const variant = await fastify.translations.createVariant(
         {
+          keyId: data.keyId,
           entityKey: data.entityKey,
           localeId: data.localeId,
           value: data.value,
           status: data.status ?? 'DRAFT',
-          brandId: data.brandId ?? null,
-          keyId: data.keyId
+          brandId: data.brandId ?? null
         },
-        (request.user as any).sub
+        (request.user as any).sub,
+        request.releaseContext?.releaseId
       )
       reply.code(201)
       return variant
@@ -111,8 +102,17 @@ export default async function (fastify: FastifyInstance) {
       if (error.message.includes('already exists')) {
         return reply.conflict('Translation variant already exists for this key/locale/brand combination')
       }
-      if (error.message.includes('key not found')) {
+      if (error.message.includes('Duplicate entity') || error.message.includes('Entity already exists')) {
+        return reply.conflict('Translation variant already exists for this key/locale/brand combination')
+      }
+      if (error.message.includes('Translation key not found') || error.message.includes('key not found')) {
         return reply.badRequest('Translation key does not exist')
+      }
+      if (error.message.includes('Entity key does not match')) {
+        return reply.badRequest('Entity key does not match the specified key ID')
+      }
+      if (error.message.includes('Either keyId or entityKey must be provided')) {
+        return reply.badRequest('Either keyId or entityKey must be provided')
       }
       throw error
     }
@@ -132,7 +132,8 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:update')
+      fastify.requirePermission('translations:update'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
@@ -143,7 +144,8 @@ export default async function (fastify: FastifyInstance) {
       const variant = await fastify.translations.updateVariant(
         variantId,
         data,
-        (request.user as any).sub
+        (request.user as any).sub,
+        request.releaseContext?.releaseId
       )
       return variant
     } catch (error: any) {
@@ -174,7 +176,8 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:approve')
+      fastify.requirePermission('translations:approve'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
@@ -185,7 +188,8 @@ export default async function (fastify: FastifyInstance) {
       const variant = await fastify.translations.setStatus(
         variantId,
         status,
-        (request.user as any).sub
+        (request.user as any).sub,
+        request.releaseContext?.releaseId
       )
       return variant
     } catch (error: any) {
@@ -209,14 +213,19 @@ export default async function (fastify: FastifyInstance) {
     },
     onRequest: [
       fastify.authenticate,
-      fastify.requirePermission('translations:delete')
+      fastify.requirePermission('translations:delete'),
+      fastify.requireReleaseContext
     ]
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const variantId = parseInt(id, 10)
 
     try {
-      await fastify.translations.deleteVariant(variantId, (request.user as any).sub)
+      await fastify.translations.deleteVariant(
+        variantId,
+        (request.user as any).sub,
+        request.releaseContext?.releaseId
+      )
       reply.code(204)
     } catch (error: any) {
       if (error.message.includes('not found')) {

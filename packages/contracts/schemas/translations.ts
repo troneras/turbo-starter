@@ -1,4 +1,5 @@
 import { Type } from "@sinclair/typebox"
+import { PaginationQuerySchema } from "./common.js"
 
 // Translation status enum
 export const TranslationStatus = Type.Union([
@@ -79,11 +80,13 @@ export const UpdateTranslationKeyRequestSchema = Type.Object({
 })
 
 export const CreateTranslationVariantRequestSchema = Type.Object({
-  entityKey: Type.String({
+  entityKey: Type.Optional(Type.String({
     pattern: "^[a-z0-9_.]+$",
-    description: "Translation key to create variant for"
-  }),
-  keyId: Type.Number({ description: "ID of the translation key" }),
+    description: "Translation key to create variant for (either entityKey or keyId is required)"
+  })),
+  keyId: Type.Optional(Type.Number({
+    description: "ID of the translation key (either entityKey or keyId is required)"
+  })),
   localeId: Type.Number({
     description: "Locale ID referencing the locales table"
   }),
@@ -95,7 +98,7 @@ export const CreateTranslationVariantRequestSchema = Type.Object({
   status: Type.Optional(TranslationStatus),
 }, {
   additionalProperties: false,
-  description: "Request to create a new translation variant"
+  description: "Request to create a new translation variant (either entityKey or keyId must be provided)"
 })
 
 export const UpdateTranslationVariantRequestSchema = Type.Object({
@@ -154,14 +157,15 @@ export const UpdateTranslationStatusRequestSchema = Type.Object({
 })
 
 // Query parameter schemas
-export const TranslationKeyQuerySchema = Type.Object({
-  parent: Type.Optional(Type.String({ description: "Parent path for tree navigation" })),
-  search: Type.Optional(Type.String({ description: "Search term for keys" })),
-  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, default: 50 })),
-  offset: Type.Optional(Type.Number({ minimum: 0, default: 0 })),
-}, {
-  additionalProperties: false,
-  description: "Query parameters for listing translation keys"
+export const TranslationKeyQuerySchema = Type.Intersect([
+  Type.Object({
+    parentPath: Type.Optional(Type.String({ description: "Filter by parent path" })),
+    depth: Type.Optional(Type.Number({ minimum: 1, default: 1, description: "Depth of key hierarchy to retrieve" })),
+    search: Type.Optional(Type.String({ description: "Search term for keys" }))
+  }),
+  PaginationQuerySchema
+], {
+  description: "Query parameters for translation keys list endpoint"
 })
 
 export const TranslationQuerySchema = Type.Object({
@@ -260,4 +264,21 @@ export const TranslationLookupResponseSchema = Type.Object({
   brandSpecific: Type.Boolean(),
 }, {
   description: "Translation lookup result"
+})
+
+// Additional query schemas for variants
+export const TranslationVariantQuerySchema = Type.Intersect([
+  Type.Object({
+    entityKey: Type.Optional(Type.String({ description: "Filter by entity key" })),
+    localeId: Type.Optional(Type.Number({ description: "Filter by locale ID" })),
+    brandId: Type.Optional(Type.Number({ description: "Filter by brand ID" })),
+    status: Type.Optional(Type.Union([
+      Type.Literal('DRAFT'),
+      Type.Literal('PENDING'),
+      Type.Literal('APPROVED')
+    ], { description: "Filter by translation status" }))
+  }),
+  PaginationQuerySchema
+], {
+  description: "Query parameters for translation variants list endpoint"
 })

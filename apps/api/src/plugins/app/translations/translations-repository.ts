@@ -60,7 +60,7 @@ const keySpec: EntitySpec<KeyPayload> = {
 const variantSpec: EntitySpec<VariantPayload> = {
   entityType: 'translation',
   typedCols: ['entityKey', 'status', 'brandId', 'localeId', 'value'],   // mapped to actual columns in entity_versions
-  uniqueKeys: [],
+  uniqueKeys: ['entityKey', 'localeId', 'brandId'], // Ensure unique combination of key + locale + brand
   validate: (draft: Partial<VariantPayload>) => {
     if (!draft.entityKey || !draft.localeId || !draft.value) throw new Error('entityKey & localeId & value required');
   }
@@ -152,8 +152,8 @@ export function translationService(fastify: FastifyInstance) {
 
     async createVariant(
       data: {
-        keyId: number;
-        entityKey: string;
+        keyId?: number;
+        entityKey?: string;
         localeId: number;
         value: string;
         status?: VariantStatus;
@@ -162,10 +162,43 @@ export function translationService(fastify: FastifyInstance) {
       userId: string,
       releaseId?: number
     ) {
+      // Validate that at least one identifier is provided
+      if (!data.keyId && !data.entityKey) {
+        throw new Error('Either keyId or entityKey must be provided');
+      }
+
+      let resolvedKey: any;
+      let finalKeyId: number;
+      let finalEntityKey: string;
+
+      if (data.keyId) {
+        // If keyId is provided, look up the key and get entityKey
+        resolvedKey = await keySvc.get(data.keyId, { releaseId });
+        if (!resolvedKey) {
+          throw new Error('Translation key not found');
+        }
+        finalKeyId = data.keyId;
+        finalEntityKey = resolvedKey.entityKey;
+
+        // If both are provided, verify they match
+        if (data.entityKey && resolvedKey.entityKey !== data.entityKey) {
+          throw new Error('Entity key does not match the specified key ID');
+        }
+      } else {
+        // If only entityKey is provided, look up the key by entityKey
+        const keyResults = await keySvc.find({ entityKey: data.entityKey }, { releaseId });
+        if (keyResults.data.length === 0) {
+          throw new Error('Translation key not found');
+        }
+        resolvedKey = keyResults.data[0];
+        finalKeyId = resolvedKey.entityId;
+        finalEntityKey = data.entityKey!;
+      }
+
       const v = await variantSvc.create(
         {
-          keyId: data.keyId,
-          entityKey: data.entityKey,
+          keyId: finalKeyId,
+          entityKey: finalEntityKey,
           localeId: data.localeId,
           value: data.value,
           status: data.status ?? 'DRAFT',

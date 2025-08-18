@@ -75,13 +75,9 @@ async function withRelease<T>(
     // Set the active release within the transaction
     await tx.execute(sql`SELECT set_active_release(${rel})`);
 
-    try {
-      // Pass the transaction and release ID to the function
-      return await fn(tx, rel);
-    } finally {
-      // Clean up (though transaction end will handle this anyway)
-      await tx.execute(sql`SELECT set_active_release(NULL)`);
-    }
+    // Pass the transaction and release ID to the function
+    // Note: No need for manual cleanup - transaction rollback/commit handles it
+    return await fn(tx, rel);
   });
 }
 
@@ -143,7 +139,30 @@ export class EntityService<P extends EntityPayload> {
         LIMIT 1
       `)
     );
-    if ((exists as any[]).length) throw new Error('Duplicate entity for given keys');
+    if ((exists as any[]).length) throw new Error('Entity already exists for the given unique keys');
+  }
+
+  private async assertUniqueInTx(draft: P, tx: any) {
+    if (!this.spec.uniqueKeys?.length) return;
+
+    // Filter out conditions where the unique key value is invalid
+    const conds = this.spec.uniqueKeys
+      .filter(k => this.isValidFilterValue(draft[k]))
+      .map(k => {
+        const columnName = this.fieldToColumn(k as string);
+        return sql`${sql.raw(columnName)} = ${draft[k]}`;
+      });
+
+    // If no valid unique key values, skip uniqueness check
+    if (conds.length === 0) return;
+
+    const exists = await tx.execute(sql`
+      SELECT 1 FROM v_entities
+      WHERE entity_type::text = ${this.spec.entityType}
+        AND ${sql.join(conds, sql` AND `)}
+      LIMIT 1
+    `);
+    if ((exists as any[]).length) throw new Error('Entity already exists for the given unique keys');
   }
 
   private splitPayload(draft: Partial<P>) {
@@ -161,11 +180,14 @@ export class EntityService<P extends EntityPayload> {
   /** create a brand-new logical entity (INSERT into entities + entity_versions) */
   async create(draft: P, opts: { userId: string; releaseId?: number }): Promise<Entity<P>> {
     this.spec.validate?.(draft);
-    await this.assertUnique(draft, opts.releaseId);
 
     const { json, cols } = this.splitPayload(draft);
 
-    const [row] = await this.db.execute(sql`
+    return withRelease(this.db, opts.releaseId, async (tx, releaseId) => {
+      // Check uniqueness within the release context
+      await this.assertUniqueInTx(draft, tx);
+
+      const [row] = await tx.execute(sql`
         WITH new_e AS (
           INSERT INTO ${schema.entities} (entity_type)
           VALUES (${this.spec.entityType}::entity_type_enum)
@@ -179,7 +201,7 @@ export class EntityService<P extends EntityPayload> {
           )
           SELECT
             id,
-            ${opts.releaseId},
+            ${releaseId},
             ${this.spec.entityType}::entity_type_enum,
             ${sql.join(Object.values(cols), sql`, `)},
             ${JSON.stringify(json)}::jsonb,
@@ -190,7 +212,9 @@ export class EntityService<P extends EntityPayload> {
         )
         SELECT * FROM new_v;
       `);
-    return this.rowToDomain(row);
+
+      return this.rowToDomain(row);
+    });
   }
 
   /** patch existing logical entity – always INSERT new version row */
