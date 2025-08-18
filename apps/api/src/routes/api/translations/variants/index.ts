@@ -23,7 +23,9 @@ const QuerySchema = Type.Object({
     Type.Literal('DRAFT'),
     Type.Literal('PENDING'),
     Type.Literal('APPROVED')
-  ]))
+  ])),
+  page: Type.Optional(Type.Number({ minimum: 1, default: 1 })),
+  pageSize: Type.Optional(Type.Number({ minimum: 1, maximum: 500, default: 100 }))
 })
 
 export default async function (fastify: FastifyInstance) {
@@ -35,24 +37,42 @@ export default async function (fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       querystring: QuerySchema,
       response: {
-        200: Type.Array(TranslationVariantSchema)
+        200: Type.Object({
+          data: Type.Array(TranslationVariantSchema),
+          pagination: Type.Object({
+            page: Type.Number(),
+            pageSize: Type.Number(),
+            totalItems: Type.Number(),
+            totalPages: Type.Number(),
+            hasNextPage: Type.Boolean(),
+            hasPreviousPage: Type.Boolean()
+          })
+        })
       }
     },
     onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
   }, async (request) => {
-    const { entityKey, localeId, brandId, status } = request.query as {
+    const { entityKey, localeId, brandId, status, page, pageSize } = request.query as {
       entityKey?: string
       localeId?: number
       brandId?: number
       status?: 'DRAFT' | 'PENDING' | 'APPROVED'
+      page?: number
+      pageSize?: number
     }
 
-    return fastify.translations.listVariants({
-      entityKey,
-      localeId,
-      brandId,
-      status
-    })
+    return fastify.translations.listVariants(
+      {
+        entityKey,
+        localeId,
+        brandId,
+        status
+      },
+      {
+        page,
+        pageSize
+      }
+    )
   })
 
   // Create translation variant

@@ -104,9 +104,12 @@ export function translationService(fastify: FastifyInstance) {
   /* -------------------- public API exposed to routes ------------- */
   return {
     // ── Translation Keys ──────────────────────────────────────────
-    async listKeys(releaseId?: number) {
-      const keys = await keySvc.find({}, { releaseId });
-      return keys.map(mapKey);
+    async listKeys(options?: { releaseId?: number; page?: number; pageSize?: number }) {
+      const result = await keySvc.find({}, options || {});
+      return {
+        data: result.data.map(mapKey),
+        pagination: result.pagination
+      };
     },
 
     async createKey(
@@ -138,10 +141,13 @@ export function translationService(fastify: FastifyInstance) {
     // ── Translation Variants ──────────────────────────────────────
     async listVariants(
       filter: Partial<VariantPayload>,
-      releaseId?: number
+      options?: { releaseId?: number; page?: number; pageSize?: number }
     ) {
-      const variants = await variantSvc.find(filter, { releaseId });
-      return variants.map(mapVar);
+      const result = await variantSvc.find(filter, options || {});
+      return {
+        data: result.data.map(mapVar),
+        pagination: result.pagination
+      };
     },
 
     async createVariant(

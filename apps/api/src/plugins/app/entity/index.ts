@@ -124,10 +124,16 @@ export class EntityService<P extends EntityPayload> {
   private async assertUnique(draft: P, releaseId?: number) {
     if (!this.spec.uniqueKeys?.length) return;
 
-    const conds = this.spec.uniqueKeys.map(k => {
-      const columnName = this.fieldToColumn(k as string);
-      return sql`${sql.raw(columnName)} = ${draft[k]}`;
-    });
+    // Filter out conditions where the unique key value is invalid
+    const conds = this.spec.uniqueKeys
+      .filter(k => this.isValidFilterValue(draft[k]))
+      .map(k => {
+        const columnName = this.fieldToColumn(k as string);
+        return sql`${sql.raw(columnName)} = ${draft[k]}`;
+      });
+
+    // If no valid unique key values, skip uniqueness check
+    if (conds.length === 0) return;
 
     const exists = await withRelease(this.db, releaseId, (tx, releaseId) =>
       tx.execute(sql`
@@ -241,20 +247,110 @@ export class EntityService<P extends EntityPayload> {
     );
   }
 
-  /** generic find – leverages v_entities so caller needn't care about release logic */
-  async find(filter: Partial<P>, ctx: { releaseId?: number } = {}): Promise<Entity<P>[]> {
+  /** Find entities with built-in pagination and safety limits */
+  async find(
+    filter: Partial<P>,
+    ctx: {
+      releaseId?: number;
+      page?: number;
+      pageSize?: number;
+      orderBy?: keyof P | 'entityId' | 'createdAt';
+      orderDirection?: 'ASC' | 'DESC';
+    } = {}
+  ): Promise<{
+    data: Entity<P>[];
+    pagination: {
+      page: number;
+      pageSize: number;
+      totalItems: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }> {
+    const page = ctx.page || 1;
+    const pageSize = Math.min(ctx.pageSize || 100, 500); // Default 100, max 500 per page
+    const offset = (page - 1) * pageSize;
+
+    // Build conditions
     const conds = [sql`entity_type = ${this.spec.entityType}`];
     Object.entries(filter).forEach(([k, v]) => {
-      const columnName = this.fieldToColumn(k);
-      conds.push(sql`${sql.raw(columnName)} = ${v}`);
+      if (this.isValidFilterValue(v)) {
+        const columnName = this.fieldToColumn(k);
+        conds.push(sql`${sql.raw(columnName)} = ${v}`);
+      }
     });
 
-    const rows = await this.db.execute(sql`
-      SELECT * FROM v_entities
-      WHERE ${sql.join(conds, sql` AND `)}
-    `);
-    // Print the Postgres row list in a human-readable format
-    return rows.map(r => this.rowToDomain(r));
+    // Build ORDER BY clause
+    let orderByClause = sql`ORDER BY created_at DESC`; // Default ordering
+    if (ctx.orderBy) {
+      const orderColumn = ctx.orderBy === 'entityId' ? 'entity_id' :
+        ctx.orderBy === 'createdAt' ? 'created_at' :
+          this.fieldToColumn(ctx.orderBy as string);
+      const direction = ctx.orderDirection || 'DESC';
+      orderByClause = sql`ORDER BY ${sql.raw(orderColumn)} ${sql.raw(direction)}`;
+    }
+
+    const result = await withRelease(this.db, ctx.releaseId, async (tx, releaseId) => {
+      // Get total count
+      const countResult = await tx.execute(sql`
+        SELECT COUNT(*) as total FROM v_entities
+        WHERE ${sql.join(conds, sql` AND `)}
+      `);
+      const totalItems = Number((countResult as any[])[0]?.total || 0);
+
+      // Get paginated data
+      const dataResult = await tx.execute(sql`
+        SELECT * FROM v_entities
+        WHERE ${sql.join(conds, sql` AND `)}
+        ${orderByClause}
+        LIMIT ${pageSize}
+        OFFSET ${offset}
+      `);
+
+      const data = (dataResult as any[]).map(r => this.rowToDomain(r));
+
+      return { data, totalItems };
+    });
+
+    const totalPages = Math.ceil(result.totalItems / pageSize);
+
+    return {
+      data: result.data,
+      pagination: {
+        page,
+        pageSize,
+        totalItems: result.totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  /** Check if a filter value is valid for querying */
+  private isValidFilterValue(value: any): boolean {
+    // Exclude null, undefined, empty strings
+    if (value === null || value === undefined || value === '') {
+      return false;
+    }
+
+    // For arrays, exclude empty arrays
+    if (Array.isArray(value) && value.length === 0) {
+      return false;
+    }
+
+    // For objects, exclude empty objects (but allow Date objects, numbers as objects, etc.)
+    if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      return Object.keys(value).length > 0;
+    }
+
+    // Allow boolean false and number 0 as valid filter values
+    if (typeof value === 'boolean' || typeof value === 'number') {
+      return true;
+    }
+
+    return true;
   }
 
   async get(entityId: number, ctx: { releaseId?: number } = {}): Promise<Entity<P> | null> {

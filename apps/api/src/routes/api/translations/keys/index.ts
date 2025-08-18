@@ -17,7 +17,9 @@ const ParamsSchema = Type.Object({
 
 const QuerySchema = Type.Object({
   parentPath: Type.Optional(Type.String()),
-  depth: Type.Optional(Type.Number({ minimum: 1, default: 1 }))
+  depth: Type.Optional(Type.Number({ minimum: 1, default: 1 })),
+  page: Type.Optional(Type.Number({ minimum: 1, default: 1 })),
+  pageSize: Type.Optional(Type.Number({ minimum: 1, maximum: 500, default: 100 }))
 })
 
 export default async function (fastify: FastifyInstance) {
@@ -29,12 +31,26 @@ export default async function (fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       querystring: QuerySchema,
       response: {
-        200: Type.Array(TranslationKeySchema)
+        200: Type.Object({
+          data: Type.Array(TranslationKeySchema),
+          pagination: Type.Object({
+            page: Type.Number(),
+            pageSize: Type.Number(),
+            totalItems: Type.Number(),
+            totalPages: Type.Number(),
+            hasNextPage: Type.Boolean(),
+            hasPreviousPage: Type.Boolean()
+          })
+        })
       }
     },
     onRequest: [fastify.authenticate, fastify.requirePermission('translations:read')]
   }, async (request) => {
-    return fastify.translations.listKeys()
+    const query = request.query as { page?: number; pageSize?: number };
+    return fastify.translations.listKeys({
+      page: query.page,
+      pageSize: query.pageSize
+    });
   })
 
   // Create translation key
