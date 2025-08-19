@@ -21,6 +21,7 @@ import { Route as JurisdictionsRouteImport } from './routes/jurisdictions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TranslationsSourceKeysRouteImport } from './routes/translations.source-keys'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -82,6 +83,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TranslationsSourceKeysRoute = TranslationsSourceKeysRouteImport.update({
+  id: '/source-keys',
+  path: '/source-keys',
+  getParentRoute: () => TranslationsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -93,9 +99,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
-  '/translations': typeof TranslationsRoute
+  '/translations': typeof TranslationsRouteWithChildren
   '/translations-simple': typeof TranslationsSimpleRoute
   '/users': typeof UsersRoute
+  '/translations/source-keys': typeof TranslationsSourceKeysRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,9 +114,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
-  '/translations': typeof TranslationsRoute
+  '/translations': typeof TranslationsRouteWithChildren
   '/translations-simple': typeof TranslationsSimpleRoute
   '/users': typeof UsersRoute
+  '/translations/source-keys': typeof TranslationsSourceKeysRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,9 +130,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
-  '/translations': typeof TranslationsRoute
+  '/translations': typeof TranslationsRouteWithChildren
   '/translations-simple': typeof TranslationsSimpleRoute
   '/users': typeof UsersRoute
+  '/translations/source-keys': typeof TranslationsSourceKeysRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/translations'
     | '/translations-simple'
     | '/users'
+    | '/translations/source-keys'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/translations'
     | '/translations-simple'
     | '/users'
+    | '/translations/source-keys'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/translations'
     | '/translations-simple'
     | '/users'
+    | '/translations/source-keys'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -181,7 +193,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ReleasesRoute: typeof ReleasesRoute
   RolesRoute: typeof RolesRoute
-  TranslationsRoute: typeof TranslationsRoute
+  TranslationsRoute: typeof TranslationsRouteWithChildren
   TranslationsSimpleRoute: typeof TranslationsSimpleRoute
   UsersRoute: typeof UsersRoute
 }
@@ -272,8 +284,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/translations/source-keys': {
+      id: '/translations/source-keys'
+      path: '/source-keys'
+      fullPath: '/translations/source-keys'
+      preLoaderRoute: typeof TranslationsSourceKeysRouteImport
+      parentRoute: typeof TranslationsRoute
+    }
   }
 }
+
+interface TranslationsRouteChildren {
+  TranslationsSourceKeysRoute: typeof TranslationsSourceKeysRoute
+}
+
+const TranslationsRouteChildren: TranslationsRouteChildren = {
+  TranslationsSourceKeysRoute: TranslationsSourceKeysRoute,
+}
+
+const TranslationsRouteWithChildren = TranslationsRoute._addFileChildren(
+  TranslationsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -285,7 +316,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ReleasesRoute: ReleasesRoute,
   RolesRoute: RolesRoute,
-  TranslationsRoute: TranslationsRoute,
+  TranslationsRoute: TranslationsRouteWithChildren,
   TranslationsSimpleRoute: TranslationsSimpleRoute,
   UsersRoute: UsersRoute,
 }

@@ -70,7 +70,7 @@ export default async function (fastify: FastifyInstance) {
     }, async (request, reply) => {
         try {
             const sourceLocale = await fastify.locales.getSourceLocale()
-            
+
             if (!sourceLocale) {
                 return reply.notFound('No source language configured')
             }
