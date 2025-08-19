@@ -7,7 +7,7 @@ export async function seed() {
 
     // Clear existing data in correct order to handle foreign key constraints
     console.log('Clearing existing data...')
-    
+
     // Clear all data - let the API rebuild roles and permissions
     // Use a safe approach that handles foreign key constraints
     const tablesToClear = [
@@ -17,7 +17,7 @@ export async function seed() {
         'brand_locales', 'brand_jurisdictions', // Clear junction tables first
         'users', 'permissions', 'roles', 'locales', 'jurisdictions', 'brands'
     ]
-    
+
     for (const tableName of tablesToClear) {
         try {
             // Use CASCADE to handle foreign key constraints properly
@@ -27,7 +27,7 @@ export async function seed() {
             console.warn(`Could not clear ${tableName} (might not exist):`, (error as any).message)
         }
     }
-    
+
     // Additional safety check - ensure users table is empty
     try {
         await db.execute(`DELETE FROM "users"`)
@@ -35,48 +35,28 @@ export async function seed() {
     } catch (error) {
         console.warn('Could not clear users table:', (error as any).message)
     }
-    
+
     console.log('Existing data cleared')
 
     // Create initial locales
     console.log('Creating initial locales...')
     const initialLocales = [
-        { code: 'en-US', name: 'English (United States)' },
-        { code: 'en-GB', name: 'English (United Kingdom)' },
-        { code: 'en-CA', name: 'English (Canada)' },
-        { code: 'en-AU', name: 'English (Australia)' },
-        { code: 'es-ES', name: 'Spanish (Spain)' },
-        { code: 'es-MX', name: 'Spanish (Mexico)' },
-        { code: 'es-AR', name: 'Spanish (Argentina)' },
-        { code: 'fr-FR', name: 'French (France)' },
-        { code: 'fr-CA', name: 'French (Canada)' },
-        { code: 'fr-BE', name: 'French (Belgium)' },
-        { code: 'de-DE', name: 'German (Germany)' },
-        { code: 'de-AT', name: 'German (Austria)' },
-        { code: 'de-CH', name: 'German (Switzerland)' },
-        { code: 'it-IT', name: 'Italian (Italy)' },
-        { code: 'it-CH', name: 'Italian (Switzerland)' },
-        { code: 'pt-PT', name: 'Portuguese (Portugal)' },
-        { code: 'pt-BR', name: 'Portuguese (Brazil)' },
-        { code: 'ru-RU', name: 'Russian (Russia)' },
-        { code: 'zh-CN', name: 'Chinese (Simplified, China)' },
-        { code: 'zh-TW', name: 'Chinese (Traditional, Taiwan)' },
-        { code: 'ja-JP', name: 'Japanese (Japan)' },
-        { code: 'ko-KR', name: 'Korean (South Korea)' },
-        { code: 'ar-SA', name: 'Arabic (Saudi Arabia)' },
-        { code: 'ar-AE', name: 'Arabic (United Arab Emirates)' },
-        { code: 'hi-IN', name: 'Hindi (India)' },
-        { code: 'nl-NL', name: 'Dutch (Netherlands)' },
-        { code: 'nl-BE', name: 'Dutch (Belgium)' },
-        { code: 'sv-SE', name: 'Swedish (Sweden)' },
-        { code: 'da-DK', name: 'Danish (Denmark)' },
-        { code: 'no-NO', name: 'Norwegian (Norway)' },
-        { code: 'fi-FI', name: 'Finnish (Finland)' },
-        { code: 'pl-PL', name: 'Polish (Poland)' },
-        { code: 'tr-TR', name: 'Turkish (Turkey)' },
-        { code: 'he-IL', name: 'Hebrew (Israel)' }
+        { code: 'en', name: 'English', source: true },  // Source language
+        { code: 'en-ON', name: 'English (Ontario)', source: false },
+        { code: 'es', name: 'Spanish', source: false },
+        { code: 'es-DJOG', name: 'Spanish (DGOJ)', source: false },
+        { code: 'de', name: 'German', source: false },
+        { code: 'it', name: 'Italian', source: false },
+        { code: 'pt', name: 'Portuguese', source: false },
+        { code: 'pt-BR', name: 'Portuguese (Brazil)', source: false },
+        { code: 'ru', name: 'Russian', source: false },
+        { code: 'nl', name: 'Dutch', source: false },
+        { code: 'sv', name: 'Swedish', source: false },
+        { code: 'da', name: 'Danish', source: false },
+        { code: 'no', name: 'Norwegian', source: false },
+        { code: 'fi', name: 'Finnish', source: false },
     ]
-    
+
     const createdLocales = await db.insert(locales).values(initialLocales).returning()
     console.log(`Created ${createdLocales.length} locales`)
 
@@ -85,38 +65,19 @@ export async function seed() {
     const initialJurisdictions = [
         // Major European gambling jurisdictions
         { code: 'MT', name: 'Malta', description: 'Malta Gaming Authority - Premier European gaming jurisdiction', status: 'active', region: 'Europe' },
-        { code: 'IM', name: 'Isle of Man', description: 'Isle of Man Gambling Supervision Commission', status: 'active', region: 'Europe' },
-        { code: 'GI', name: 'Gibraltar', description: 'Gibraltar Regulatory Authority', status: 'active', region: 'Europe' },
-        { code: 'CY', name: 'Cyprus', description: 'Cyprus Gaming and Casino Supervision Commission', status: 'active', region: 'Europe' },
-        { code: 'SE', name: 'Sweden', description: 'Swedish Gambling Authority (Spelinspektionen)', status: 'active', region: 'Europe' },
-        { code: 'DK', name: 'Denmark', description: 'Danish Gambling Authority (Spillemyndigheden)', status: 'active', region: 'Europe' },
-        { code: 'DE', name: 'Germany', description: 'German Interstate Treaty on Gambling (Glücksspielstaatsvertrag)', status: 'active', region: 'Europe' },
-        { code: 'ES', name: 'Spain', description: 'Spanish Directorate General for Gambling Regulation (DGOJ)', status: 'active', region: 'Europe' },
-        { code: 'IT', name: 'Italy', description: 'Italian Customs and Monopolies Agency (ADM)', status: 'active', region: 'Europe' },
-        
-        // Caribbean jurisdictions
-        { code: 'CW', name: 'Curacao', description: 'Curacao Gaming Control Board', status: 'active', region: 'Caribbean' },
-        { code: 'AI', name: 'Anguilla', description: 'Anguilla Gaming Commission', status: 'active', region: 'Caribbean' },
-        
-        // Major US states
-        { code: 'US-NJ', name: 'New Jersey', description: 'New Jersey Division of Gaming Enforcement', status: 'active', region: 'North America' },
-        { code: 'US-NV', name: 'Nevada', description: 'Nevada Gaming Control Board', status: 'active', region: 'North America' },
-        { code: 'US-PA', name: 'Pennsylvania', description: 'Pennsylvania Gaming Control Board', status: 'active', region: 'North America' },
-        { code: 'US-MI', name: 'Michigan', description: 'Michigan Gaming Control Board', status: 'active', region: 'North America' },
-        { code: 'US-CT', name: 'Connecticut', description: 'Connecticut Department of Consumer Protection', status: 'active', region: 'North America' },
-        
-        // Other major jurisdictions
-        { code: 'UK', name: 'United Kingdom', description: 'UK Gambling Commission', status: 'active', region: 'Europe' },
-        { code: 'AU', name: 'Australia', description: 'Australian Communications and Media Authority', status: 'active', region: 'Oceania' },
-        { code: 'CA-ON', name: 'Ontario', description: 'Alcohol and Gaming Commission of Ontario', status: 'active', region: 'North America' }
+        { code: 'SE', name: 'Swedish Gambling Authority (Spelinspektionen)', status: 'active', region: 'Europe' },
+        { code: 'DK', name: 'Danish Gambling Authority (Spillemyndigheden)', status: 'active', region: 'Europe' },
+        { code: 'DE', name: 'German Interstate Treaty on Gambling (Glücksspielstaatsvertrag)', status: 'active', region: 'Europe' },
+        { code: 'ES', name: 'Spanish Directorate General for Gambling Regulation (DGOJ)', status: 'active', region: 'Europe' },
+        { code: 'IT', name: 'Italian Customs and Monopolies Agency (ADM)', status: 'active', region: 'Europe' },
     ]
-    
+
     const createdJurisdictions = await db.insert(jurisdictions).values(initialJurisdictions).returning()
     console.log(`Created ${createdJurisdictions.length} jurisdictions`)
 
     // Create essential users
     console.log('Creating essential users...')
-    
+
     const essentialUsers = [
         // System user for automated operations
         {
@@ -232,7 +193,7 @@ export async function seed() {
         description: role.description,
         created_by: '00000000-0000-0000-0000-000000000000' // System user
     }))
-    
+
     const createdRoles = await db.insert(roles).values(roleData).returning()
     console.log(`Created ${createdRoles.length} roles`)
 
@@ -240,24 +201,24 @@ export async function seed() {
     console.log('Assigning roles to users...')
     const roleAssignments = [
         // Admin user gets admin role
-        { 
-            userId: '11111111-1111-1111-1111-111111111111', 
-            roleId: createdRoles.find(r => r.name === 'admin')!.id 
+        {
+            userId: '11111111-1111-1111-1111-111111111111',
+            roleId: createdRoles.find(r => r.name === 'admin')!.id
         },
         // Editor user gets editor role
-        { 
-            userId: '22222222-2222-2222-2222-222222222222', 
-            roleId: createdRoles.find(r => r.name === 'editor')!.id 
+        {
+            userId: '22222222-2222-2222-2222-222222222222',
+            roleId: createdRoles.find(r => r.name === 'editor')!.id
         },
         // Basic user gets user role
-        { 
-            userId: '33333333-3333-3333-3333-333333333333', 
-            roleId: createdRoles.find(r => r.name === 'user')!.id 
+        {
+            userId: '33333333-3333-3333-3333-333333333333',
+            roleId: createdRoles.find(r => r.name === 'user')!.id
         },
         // System user gets service role
-        { 
-            userId: '00000000-0000-0000-0000-000000000000', 
-            roleId: createdRoles.find(r => r.name === 'service')!.id 
+        {
+            userId: '00000000-0000-0000-0000-000000000000',
+            roleId: createdRoles.find(r => r.name === 'service')!.id
         }
     ]
 
@@ -287,6 +248,6 @@ main().catch((err) => {
     console.error(err)
     process.exit(1)
 })
-.finally(() => {
-    process.exit(0);
-});
+    .finally(() => {
+        process.exit(0);
+    });

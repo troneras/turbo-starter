@@ -11,12 +11,12 @@ import { DeleteLanguageDialog } from '../components/delete-language-dialog';
 import { BulkDeleteLanguagesDialog } from '../components/bulk-delete-languages-dialog';
 import { useLanguages } from '../hooks/use-languages';
 import { useLanguageSelection } from '../hooks/use-language-selection';
-import type { 
-  LanguageFilters, 
-  LanguageSort, 
-  LanguageSortField, 
-  SortDirection, 
-  LanguageTableRow 
+import type {
+  LanguageFilters,
+  LanguageSort,
+  LanguageSortField,
+  SortDirection,
+  LanguageTableRow
 } from '../types';
 
 export function LanguagesPage() {
@@ -52,16 +52,21 @@ export function LanguagesPage() {
     id: language.id,
     code: language.code,
     name: language.name,
+    source: language.source,
   })) || [];
 
+  // Calculate selectable languages (excluding source languages)
+  const selectableLanguages = languages.filter(lang => !lang.source);
+  const selectableLanguageIds = selectableLanguages.map(lang => lang.id);
+
   // Language selection management
-  const { 
-    selection, 
-    toggleLanguage, 
-    toggleAll, 
-    clearSelection 
+  const {
+    selection,
+    toggleLanguage,
+    toggleAll,
+    clearSelection
   } = useLanguageSelection({
-    totalLanguages: languages.length,
+    selectableLanguages: selectableLanguages.length,
   });
 
   // Sync URL with state - debounce to prevent excessive navigation
@@ -74,7 +79,7 @@ export function LanguagesPage() {
       // Only navigate if params actually changed
       const currentSearch = searchParams?.search || '';
       const currentPage = searchParams?.page || 1;
-      
+
       if (filters.search !== currentSearch || page !== currentPage) {
         navigate({
           to: '/languages',
@@ -132,8 +137,8 @@ export function LanguagesPage() {
           <p className="text-muted-foreground">
             {error instanceof Error ? error.message : 'Failed to load languages'}
           </p>
-          <Button 
-            onClick={() => window.location.reload()} 
+          <Button
+            onClick={() => window.location.reload()}
             className="mt-4"
           >
             Try Again
@@ -183,7 +188,7 @@ export function LanguagesPage() {
         sort={sort}
         loading={isLoading}
         onToggleLanguage={toggleLanguage}
-        onToggleAll={toggleAll}
+        onToggleAll={() => toggleAll(selectableLanguageIds)}
         onSortChange={handleSortChange}
         onEditLanguage={handleEditLanguage}
         onDeleteLanguage={handleDeleteLanguage}

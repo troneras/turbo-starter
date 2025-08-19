@@ -24,6 +24,7 @@ export const locales = pgTable('locales', {
     id: serial('id').primaryKey(),
     code: varchar('code', { length: 10 }).unique().notNull(),
     name: text('name').notNull(),
+    source: boolean('source').default(false).notNull(),
 });
 
 export const jurisdictions = pgTable('jurisdictions', {

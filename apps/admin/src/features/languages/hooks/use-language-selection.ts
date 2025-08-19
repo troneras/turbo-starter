@@ -2,14 +2,14 @@ import { useState, useCallback } from 'react';
 import type { LanguageSelection } from '../types';
 
 interface UseLanguageSelectionOptions {
-  totalLanguages: number;
+  selectableLanguages: number; // Total languages that can be selected (excluding source)
 }
 
-export function useLanguageSelection({ totalLanguages }: UseLanguageSelectionOptions) {
+export function useLanguageSelection({ selectableLanguages }: UseLanguageSelectionOptions) {
   const [selectedLanguages, setSelectedLanguages] = useState<Set<number>>(new Set());
 
-  const isAllSelected = selectedLanguages.size === totalLanguages && totalLanguages > 0;
-  const indeterminate = selectedLanguages.size > 0 && selectedLanguages.size < totalLanguages;
+  const isAllSelected = selectedLanguages.size === selectableLanguages && selectableLanguages > 0;
+  const indeterminate = selectedLanguages.size > 0 && selectedLanguages.size < selectableLanguages;
 
   const selection: LanguageSelection = {
     selectedLanguages,
@@ -31,10 +31,12 @@ export function useLanguageSelection({ totalLanguages }: UseLanguageSelectionOpt
 
   const toggleAll = useCallback((languageIds: number[]) => {
     setSelectedLanguages(prev => {
-      if (prev.size === languageIds.length) {
+      // Only include selectable language IDs (exclude source languages)
+      const selectableIds = languageIds;
+      if (prev.size === selectableIds.length) {
         return new Set(); // Deselect all
       } else {
-        return new Set(languageIds); // Select all
+        return new Set(selectableIds); // Select all selectable
       }
     });
   }, []);

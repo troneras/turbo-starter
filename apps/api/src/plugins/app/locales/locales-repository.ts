@@ -13,11 +13,13 @@ declare module 'fastify' {
 interface CreateLocaleData {
     code: string
     name: string
+    source?: boolean
 }
 
 interface UpdateLocaleData {
     code?: string
     name?: string
+    // source field cannot be updated once set
 }
 
 interface ListLocalesFilters {
@@ -114,6 +116,17 @@ export function localesRepository(fastify: FastifyInstance) {
             return locale || null
         },
 
+        // Get the source locale
+        async getSourceLocale(): Promise<Locale | null> {
+            const [locale] = await fastify.db
+                .select()
+                .from(locales)
+                .where(eq(locales.source, true))
+                .limit(1)
+
+            return locale || null
+        },
+
         // Create new locale
         async createLocale(data: CreateLocaleData): Promise<Locale> {
             // Check if locale code already exists
@@ -122,11 +135,20 @@ export function localesRepository(fastify: FastifyInstance) {
                 throw new Error('Locale with this code already exists')
             }
 
+            // If trying to set as source, check if source locale already exists
+            if (data.source === true) {
+                const existingSource = await this.getSourceLocale()
+                if (existingSource) {
+                    throw new Error('A source locale already exists. Only one locale can be marked as source.')
+                }
+            }
+
             const [newLocale] = await fastify.db
                 .insert(locales)
                 .values({
                     code: data.code,
-                    name: data.name
+                    name: data.name,
+                    source: data.source || false
                 })
                 .returning()
 
@@ -145,6 +167,11 @@ export function localesRepository(fastify: FastifyInstance) {
                 throw new Error('Locale not found')
             }
 
+            // Prevent modification of source locale's source status
+            if (existingLocale.source) {
+                throw new Error('Cannot modify the source locale. The source language is immutable once set.')
+            }
+
             // Check code uniqueness if updating code
             if (updates.code && updates.code !== existingLocale.code) {
                 const existingCodeLocale = await this.getLocaleByCode(updates.code)
@@ -153,7 +180,7 @@ export function localesRepository(fastify: FastifyInstance) {
                 }
             }
 
-            // Build update data
+            // Build update data (source field is explicitly excluded)
             const updateData: Partial<NewLocale> = {}
             if (updates.code !== undefined) updateData.code = updates.code
             if (updates.name !== undefined) updateData.name = updates.name
@@ -181,6 +208,11 @@ export function localesRepository(fastify: FastifyInstance) {
             const locale = await this.getLocaleById(id)
             if (!locale) {
                 throw new Error('Locale not found')
+            }
+
+            // Prevent deletion of source locale
+            if (locale.source) {
+                throw new Error('Cannot delete the source locale. The source language cannot be removed.')
             }
 
             // Note: In a production system, you might want to check for references

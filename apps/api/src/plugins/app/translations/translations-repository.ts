@@ -543,6 +543,11 @@ export function translationService(fastify: FastifyInstance) {
     async getLocales() {
       // Use the locales service to get all locales
       return await fastify.locales.getAllLocales();
+    },
+
+    async getSourceLocale() {
+      // Get the source locale for translation workflows
+      return await fastify.locales.getSourceLocale();
     }
   };
 }

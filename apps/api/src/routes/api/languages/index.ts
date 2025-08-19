@@ -54,6 +54,33 @@ export default async function (fastify: FastifyInstance) {
         return result.locales
     })
 
+    // Get source language
+    fastify.get('/source', {
+        schema: {
+            tags: ['languages'],
+            summary: 'Get the source language',
+            security: [{ bearerAuth: [] }],
+            response: {
+                200: LanguageDetailResponseSchema,
+                401: UnauthorizedErrorSchema,
+                404: NotFoundErrorSchema
+            }
+        },
+        onRequest: [fastify.authenticate, fastify.requirePermission('languages:read')]
+    }, async (request, reply) => {
+        try {
+            const sourceLocale = await fastify.locales.getSourceLocale()
+            
+            if (!sourceLocale) {
+                return reply.notFound('No source language configured')
+            }
+
+            return sourceLocale
+        } catch (error: any) {
+            throw error
+        }
+    })
+
     // Get language by ID
     fastify.get('/:id', {
         schema: {
@@ -115,6 +142,9 @@ export default async function (fastify: FastifyInstance) {
             if (error.message.includes('already exists')) {
                 return reply.conflict(`Language with code "${data.code}" already exists`)
             }
+            if (error.message.includes('source locale already exists')) {
+                return reply.conflict('A source locale already exists. Only one locale can be marked as source.')
+            }
             throw error
         }
     })
@@ -154,6 +184,9 @@ export default async function (fastify: FastifyInstance) {
             if (error.message.includes('already exists')) {
                 return reply.conflict(`Language with code "${data.code}" already exists`)
             }
+            if (error.message.includes('Cannot modify the source locale')) {
+                return reply.badRequest('Cannot modify the source locale. The source language is immutable once set.')
+            }
             throw error
         }
     })
@@ -186,6 +219,9 @@ export default async function (fastify: FastifyInstance) {
         } catch (error: any) {
             if (error.message.includes('not found')) {
                 return reply.notFound(`Language with ID ${id} not found`)
+            }
+            if (error.message.includes('Cannot delete the source locale')) {
+                return reply.badRequest('Cannot delete the source locale. The source language cannot be removed.')
             }
             // Handle foreign key constraints - this would need to be implemented in the locales service
             if (error.code === '23503') {

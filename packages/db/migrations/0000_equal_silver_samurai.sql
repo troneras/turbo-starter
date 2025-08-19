@@ -38,6 +38,7 @@ CREATE TABLE "locales" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"code" varchar(10) NOT NULL,
 	"name" text NOT NULL,
+	"source" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "locales_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
