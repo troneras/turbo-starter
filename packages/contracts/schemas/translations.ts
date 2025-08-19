@@ -278,3 +278,131 @@ export const TranslationVariantQuerySchema = Type.Intersect([
 ], {
   description: "Query parameters for translation variants list endpoint"
 })
+
+// ── Unified Translation Operations ──────────────────────────────────
+
+export const CreateUnifiedTranslationRequestSchema = Type.Object({
+  entityKey: Type.String({
+    pattern: "^[a-z0-9_.]+$",
+    description: "Dotted path key (e.g., checkout.button.confirm)"
+  }),
+  description: Type.Optional(Type.String({ description: "Description of the translation key for editors" })),
+  defaultValue: Type.String({
+    maxLength: 1024,
+    description: "Default translation value (will be used for default locale)"
+  }),
+  defaultLocaleId: Type.Optional(Type.Number({
+    description: "Locale ID for default translation (defaults to en-US if not specified)"
+  })),
+  brandId: Type.Optional(Type.Number({ description: "Brand ID for brand-specific translation" })),
+  jurisdictionId: Type.Optional(Type.Number({ description: "Jurisdiction ID for jurisdiction-specific translation" })),
+  status: Type.Optional(TranslationStatus),
+  metadata: Type.Optional(Type.Object({
+    maxLength: Type.Optional(Type.Number()),
+    pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
+    comments: Type.Optional(Type.String()),
+  })),
+  additionalVariants: Type.Optional(Type.Array(Type.Object({
+    localeId: Type.Number({ description: "Locale ID for this variant" }),
+    value: Type.String({ maxLength: 1024, description: "Translation value for this locale" }),
+    brandId: Type.Optional(Type.Number({ description: "Brand ID override for this variant" })),
+    jurisdictionId: Type.Optional(Type.Number({ description: "Jurisdiction ID override for this variant" })),
+    status: Type.Optional(TranslationStatus),
+  }), { description: "Additional translation variants to create" }))
+}, {
+  additionalProperties: false,
+  description: "Request to create a translation key with default and optional additional variants in a single operation"
+})
+
+export const UnifiedTranslationResponseSchema = Type.Object({
+  key: TranslationKeySchema,
+  defaultVariant: TranslationVariantSchema,
+  additionalVariants: Type.Optional(Type.Array(TranslationVariantSchema)),
+}, {
+  description: "Response for unified translation creation"
+})
+
+// ── Batch Translation Operations ──────────────────────────────────
+
+export const BatchTranslationItemSchema = Type.Object({
+  entityKey: Type.String({
+    pattern: "^[a-z0-9_.]+$",
+    description: "Dotted path key"
+  }),
+  description: Type.Optional(Type.String({ description: "Key description" })),
+  localeId: Type.Number({ description: "Locale ID for this translation" }),
+  value: Type.String({ maxLength: 1024, description: "Translation value" }),
+  status: Type.Optional(TranslationStatus),
+  metadata: Type.Optional(Type.Object({
+    maxLength: Type.Optional(Type.Number()),
+    pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
+    comments: Type.Optional(Type.String()),
+  })),
+}, {
+  description: "Individual translation item for batch operations"
+})
+
+export const BatchTranslationRequestSchema = Type.Object({
+  translations: Type.Array(BatchTranslationItemSchema, {
+    minItems: 1,
+    maxItems: 1000,
+    description: "Array of translations to create/update"
+  }),
+  defaultBrandId: Type.Optional(Type.Number({ description: "Default brand ID to apply to all translations" })),
+  defaultJurisdictionId: Type.Optional(Type.Number({ description: "Default jurisdiction ID to apply to all translations" })),
+  overwriteExisting: Type.Optional(Type.Boolean({
+    default: false,
+    description: "Whether to overwrite existing translation variants"
+  })),
+  createMissingKeys: Type.Optional(Type.Boolean({
+    default: true,
+    description: "Whether to create translation keys that don't exist"
+  })),
+}, {
+  additionalProperties: false,
+  description: "Request to batch create/update translations"
+})
+
+export const BatchTranslationResultSchema = Type.Object({
+  success: Type.Boolean(),
+  processed: Type.Number({ description: "Number of translations processed" }),
+  created: Type.Number({ description: "Number of new translations created" }),
+  updated: Type.Number({ description: "Number of existing translations updated" }),
+  errors: Type.Array(Type.Object({
+    entityKey: Type.String(),
+    localeId: Type.Number(),
+    error: Type.String(),
+  }), { description: "Errors encountered during processing" }),
+  createdKeys: Type.Array(TranslationKeySchema, { description: "New translation keys created" }),
+  createdVariants: Type.Array(TranslationVariantSchema, { description: "New translation variants created" }),
+  updatedVariants: Type.Array(TranslationVariantSchema, { description: "Updated translation variants" }),
+}, {
+  description: "Result of batch translation operation"
+})
+
+// ── CSV Import Specific Schema ──────────────────────────────────
+
+export const TranslationCsvImportRequestSchema = Type.Object({
+  csvContent: Type.String({ description: "CSV content as string" }),
+  defaultBrandId: Type.Optional(Type.Number({ description: "Default brand ID for all imported translations" })),
+  defaultJurisdictionId: Type.Optional(Type.Number({ description: "Default jurisdiction ID for all imported translations" })),
+  overwriteExisting: Type.Optional(Type.Boolean({
+    default: false,
+    description: "Whether to overwrite existing translation variants"
+  })),
+  createMissingKeys: Type.Optional(Type.Boolean({
+    default: true,
+    description: "Whether to create translation keys that don't exist"
+  })),
+  csvOptions: Type.Optional(Type.Object({
+    delimiter: Type.Optional(Type.String({ default: ",", description: "CSV delimiter character" })),
+    hasHeader: Type.Optional(Type.Boolean({ default: true, description: "Whether CSV has header row" })),
+    keyColumn: Type.Optional(Type.String({ default: "key", description: "Column name for translation keys" })),
+    valueColumn: Type.Optional(Type.String({ default: "value", description: "Column name for translation values" })),
+    localeColumn: Type.Optional(Type.String({ default: "locale", description: "Column name for locale codes" })),
+    descriptionColumn: Type.Optional(Type.String({ description: "Column name for key descriptions" })),
+  })),
+}, {
+  additionalProperties: false,
+  description: "Request to import translations from CSV"
+})

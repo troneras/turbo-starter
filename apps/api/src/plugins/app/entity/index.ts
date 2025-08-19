@@ -334,21 +334,83 @@ export class EntityService<P extends EntityPayload> {
 
   /** soft-delete a logical entity */
   async remove(entityId: number, opts: { userId: string; releaseId?: number }): Promise<void> {
-    await withRelease(this.db, opts.releaseId, (tx, releaseId) =>
-      tx.execute(sql`
-        INSERT INTO ${schema.entityVersions} (
-          entity_id, release_id, entity_type,
-          payload, change_type, is_deleted, created_by
-        )
-        SELECT
-          ${entityId},
-          ${releaseId},
-          ${this.spec.entityType}::entity_type_enum,
-          payload, 'DELETE'::entity_change_type, true, ${opts.userId}
-        FROM v_entities
+    await withRelease(this.db, opts.releaseId, async (tx, releaseId) => {
+      // Check if there's already a version in this release for this entity
+      const existingVersionResult = await tx.execute(sql`
+        SELECT entity_id, change_type, payload
+        FROM ${schema.entityVersions}
         WHERE entity_id = ${entityId}
-      `)
-    );
+          AND release_id = ${releaseId}
+          AND entity_type = ${this.spec.entityType}::entity_type_enum
+        LIMIT 1
+      `);
+
+      const existingVersion = (existingVersionResult as any[])[0];
+
+      if (existingVersion) {
+        if (existingVersion.change_type === 'CREATE') {
+          // Case 1: Entity was created in this release and never deployed
+          // Remove the version and delete the logical entity entirely
+          await tx.execute(sql`
+            DELETE FROM ${schema.entityVersions}
+            WHERE entity_id = ${entityId}
+              AND release_id = ${releaseId}
+              AND entity_type = ${this.spec.entityType}::entity_type_enum
+          `);
+
+          await tx.execute(sql`
+            DELETE FROM ${schema.entities}
+            WHERE id = ${entityId}
+          `);
+        } else {
+          // Case 2: Entity has UPDATE version in this release
+          // Replace the existing version with a DELETE version
+          await tx.execute(sql`
+            UPDATE ${schema.entityVersions}
+            SET 
+              change_type = 'DELETE'::entity_change_type,
+              is_deleted = true
+            WHERE entity_id = ${entityId}
+              AND release_id = ${releaseId}
+              AND entity_type = ${this.spec.entityType}::entity_type_enum
+          `);
+
+          // Also mark the logical entity as deleted
+          await tx.execute(sql`
+            UPDATE ${schema.entities}
+            SET deleted_at = NOW()
+            WHERE id = ${entityId}
+          `);
+        }
+      } else {
+        // Case 3: No existing version in this release
+        // Mark the logical entity as deleted and create a new DELETE version
+        await tx.execute(sql`
+          UPDATE ${schema.entities}
+          SET deleted_at = NOW()
+          WHERE id = ${entityId}
+        `);
+
+        // Create a deletion version with all required fields preserved
+        await tx.execute(sql`
+          INSERT INTO ${schema.entityVersions} (
+            entity_id, release_id, entity_type,
+            entity_key, brand_id, jurisdiction_id, locale_id, parent_entity_id,
+            value, status, published_at,
+            payload, change_type, is_deleted, created_by
+          )
+          SELECT
+            ${entityId},
+            ${releaseId},
+            ${this.spec.entityType}::entity_type_enum,
+            entity_key, brand_id, jurisdiction_id, locale_id, parent_entity_id,
+            value, status, published_at,
+            payload, 'DELETE'::entity_change_type, true, ${opts.userId}
+          FROM v_entities
+          WHERE entity_id = ${entityId}
+        `);
+      }
+    });
   }
 
   /** Find entities with built-in pagination and safety limits */

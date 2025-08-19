@@ -19,7 +19,13 @@ import {
     TranslationLookupRequestSchema,
     TranslationLookupResponseSchema,
     CreateTranslationRequestSchema,
-    UpdateTranslationRequestSchema
+    UpdateTranslationRequestSchema,
+    CreateUnifiedTranslationRequestSchema,
+    UnifiedTranslationResponseSchema,
+    BatchTranslationItemSchema,
+    BatchTranslationRequestSchema,
+    BatchTranslationResultSchema,
+    TranslationCsvImportRequestSchema
 } from "../schemas/translations.js"
 
 /**
@@ -172,3 +178,105 @@ export type CreateTranslationRequest = Static<typeof CreateTranslationRequestSch
  * Request to update a translation.
  */
 export type UpdateTranslationRequest = Static<typeof UpdateTranslationRequestSchema>
+
+// ── Unified Translation Operations ──────────────────────────────────
+
+/**
+ * Request to create a translation with key and default variant in a single operation.
+ * 
+ * @description This unified endpoint simplifies translation creation by allowing
+ * clients to create both the translation key and its default variant (plus optional
+ * additional variants) in a single transaction.
+ * 
+ * @example
+ * ```typescript
+ * const request: CreateUnifiedTranslationRequest = {
+ *   entityKey: "checkout.button.confirm",
+ *   description: "Confirm button in checkout flow",
+ *   defaultValue: "Confirm Purchase",
+ *   defaultLocaleId: 1, // en-US
+ *   brandId: 2,
+ *   additionalVariants: [
+ *     {
+ *       localeId: 3, // es-ES
+ *       value: "Confirmar Compra"
+ *     }
+ *   ]
+ * }
+ * ```
+ */
+export type CreateUnifiedTranslationRequest = Static<typeof CreateUnifiedTranslationRequestSchema>
+
+/**
+ * Response for unified translation creation.
+ * 
+ * @description Contains the created translation key and all created variants.
+ */
+export type UnifiedTranslationResponse = Static<typeof UnifiedTranslationResponseSchema>
+
+// ── Batch Translation Operations ──────────────────────────────────
+
+/**
+ * Individual translation item for batch operations.
+ */
+export type BatchTranslationItem = Static<typeof BatchTranslationItemSchema>
+
+/**
+ * Request to batch create/update translations.
+ * 
+ * @description Allows bulk operations for importing translations,
+ * particularly useful for CSV imports and large dataset operations.
+ * 
+ * @example
+ * ```typescript
+ * const request: BatchTranslationRequest = {
+ *   translations: [
+ *     {
+ *       entityKey: "app.welcome.title",
+ *       description: "Welcome page title",
+ *       localeId: 1,
+ *       value: "Welcome to our app"
+ *     },
+ *     {
+ *       entityKey: "app.welcome.title",
+ *       localeId: 3,
+ *       value: "Bienvenido a nuestra aplicación"
+ *     }
+ *   ],
+ *   defaultBrandId: 2,
+ *   createMissingKeys: true
+ * }
+ * ```
+ */
+export type BatchTranslationRequest = Static<typeof BatchTranslationRequestSchema>
+
+/**
+ * Result of batch translation operation.
+ * 
+ * @description Provides detailed information about the batch operation
+ * including success/failure counts and any errors encountered.
+ */
+export type BatchTranslationResult = Static<typeof BatchTranslationResultSchema>
+
+/**
+ * Request to import translations from CSV.
+ * 
+ * @description Specialized endpoint for CSV imports with configurable
+ * column mapping and import options.
+ * 
+ * @example
+ * ```typescript
+ * const request: TranslationCsvImportRequest = {
+ *   csvContent: "key,locale,value\napp.title,en-US,My App\napp.title,es-ES,Mi Aplicación",
+ *   defaultBrandId: 2,
+ *   csvOptions: {
+ *     delimiter: ",",
+ *     hasHeader: true,
+ *     keyColumn: "key",
+ *     localeColumn: "locale",
+ *     valueColumn: "value"
+ *   }
+ * }
+ * ```
+ */
+export type TranslationCsvImportRequest = Static<typeof TranslationCsvImportRequestSchema>

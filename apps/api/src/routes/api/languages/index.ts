@@ -1,6 +1,4 @@
-import { eq, like, or } from 'drizzle-orm'
 import type { FastifyInstance } from "fastify";
-import { locales } from '@cms/db/schema'
 import {
     LanguageListResponseSchema,
     LanguageDetailResponseSchema,
@@ -41,31 +39,19 @@ export default async function (fastify: FastifyInstance) {
         onRequest: [fastify.authenticate, fastify.requirePermission('languages:read')]
     }, async (request, reply) => {
         const query = request.query as LanguageQuery
-        
+
         // Apply pagination
         const page = query.page || 1
         const pageSize = Math.min(query.pageSize || 20, 100) // Cap at 100
-        const offset = (page - 1) * pageSize
-        
-        // Build query with optional search filter
-        let allLanguages
-        if (query.search) {
-            const searchTerm = `%${query.search}%`
-            allLanguages = await fastify.db.select().from(locales)
-                .where(
-                    or(
-                        like(locales.code, searchTerm),
-                        like(locales.name, searchTerm)
-                    )
-                )
-                .limit(pageSize)
-                .offset(offset)
-        } else {
-            allLanguages = await fastify.db.select().from(locales)
-                .limit(pageSize)
-                .offset(offset)
-        }
-        return allLanguages
+
+        // Use locales service with search and pagination
+        const result = await fastify.locales.listLocales(page, pageSize, {
+            search: query.search,
+            sortBy: 'name',
+            sortDirection: 'asc'
+        })
+
+        return result.locales
     })
 
     // Get language by ID
@@ -85,13 +71,17 @@ export default async function (fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as LanguageParams
 
-        const language = await fastify.db.select().from(locales).where(eq(locales.id, id)).limit(1)
+        try {
+            const language = await fastify.locales.getLocaleById(id)
 
-        if (language.length === 0) {
-            return reply.notFound(`Language with ID ${id} not found`)
+            if (!language) {
+                return reply.notFound(`Language with ID ${id} not found`)
+            }
+
+            return language
+        } catch (error: any) {
+            throw error
         }
-
-        return language[0]
     })
 
     // Create new language
@@ -117,15 +107,12 @@ export default async function (fastify: FastifyInstance) {
         const data = request.body as CreateLanguageRequest
 
         try {
-            const [language] = await fastify.db
-                .insert(locales)
-                .values(data)
-                .returning()
+            const language = await fastify.locales.createLocale(data)
 
             reply.code(201)
             return language
         } catch (error: any) {
-            if (error.code === '23505') { // Unique constraint violation
+            if (error.message.includes('already exists')) {
                 return reply.conflict(`Language with code "${data.code}" already exists`)
             }
             throw error
@@ -158,27 +145,13 @@ export default async function (fastify: FastifyInstance) {
         const data = request.body as UpdateLanguageRequest
 
         try {
-            // Check if language exists
-            const existing = await fastify.db.select().from(locales).where(eq(locales.id, id)).limit(1)
-            
-            if (existing.length === 0) {
-                return reply.notFound(`Language with ID ${id} not found`)
-            }
-
-            // Update only provided fields
-            const updateData: Partial<typeof data> = {}
-            if (data.code !== undefined) updateData.code = data.code
-            if (data.name !== undefined) updateData.name = data.name
-
-            const [language] = await fastify.db
-                .update(locales)
-                .set(updateData)
-                .where(eq(locales.id, id))
-                .returning()
-
+            const language = await fastify.locales.updateLocale(id, data)
             return language
         } catch (error: any) {
-            if (error.code === '23505') { // Unique constraint violation
+            if (error.message.includes('not found')) {
+                return reply.notFound(`Language with ID ${id} not found`)
+            }
+            if (error.message.includes('already exists')) {
                 return reply.conflict(`Language with code "${data.code}" already exists`)
             }
             throw error
@@ -206,19 +179,15 @@ export default async function (fastify: FastifyInstance) {
     }, async (request, reply) => {
         const { id } = request.params as LanguageParams
 
-        // Check if language exists
-        const existing = await fastify.db.select().from(locales).where(eq(locales.id, id)).limit(1)
-        
-        if (existing.length === 0) {
-            return reply.notFound(`Language with ID ${id} not found`)
-        }
-
         try {
-            await fastify.db.delete(locales).where(eq(locales.id, id))
+            await fastify.locales.deleteLocale(id)
             reply.code(204)
             return null
         } catch (error: any) {
-            // Handle foreign key constraints
+            if (error.message.includes('not found')) {
+                return reply.notFound(`Language with ID ${id} not found`)
+            }
+            // Handle foreign key constraints - this would need to be implemented in the locales service
             if (error.code === '23503') {
                 return reply.badRequest('Cannot delete language that is referenced by other entities')
             }

@@ -56,15 +56,20 @@ BEGIN
         ev.id as version_id
     FROM entity_versions ev
     INNER JOIN releases r ON ev.release_id = r.id
+    INNER JOIN entities e ON e.id = ev.entity_id
     CROSS JOIN target_release tr
     WHERE 
-        -- Include if it's the target release itself
-        ev.release_id = tr.id
-        OR (
-            -- Or if it's from a deployed release at or before the target
-            -- Handle OPEN releases by including all deployed releases when deploy_seq IS NULL
-            r.deploy_seq IS NOT NULL
-            AND (tr.deploy_seq IS NULL OR r.deploy_seq <= tr.deploy_seq)
+        -- Exclude logically deleted entities
+        e.deleted_at IS NULL
+        AND (
+            -- Include if it's the target release itself
+            ev.release_id = tr.id
+            OR (
+                -- Or if it's from a deployed release at or before the target
+                -- Handle OPEN releases by including all deployed releases when deploy_seq IS NULL
+                r.deploy_seq IS NOT NULL
+                AND (tr.deploy_seq IS NULL OR r.deploy_seq <= tr.deploy_seq)
+            )
         )
     ORDER BY 
         ev.entity_id, 
@@ -87,14 +92,19 @@ SELECT DISTINCT ON (ev.entity_id)
   (ev.release_id = ar.id) AS is_from_active_release
 FROM entity_versions ev
 INNER JOIN releases r ON r.id = ev.release_id
+INNER JOIN entities e ON e.id = ev.entity_id
 CROSS JOIN active_release ar
 WHERE 
-  ev.release_id = ar.id  -- Direct match with active release
-  OR (
-    r.status = 'DEPLOYED' 
-    AND r.deploy_seq IS NOT NULL
-    AND (ar.deploy_seq IS NULL OR r.deploy_seq <= ar.deploy_seq)
-    -- Include if from a deployed release before or at the active release's deploy point
+  -- Exclude logically deleted entities
+  e.deleted_at IS NULL
+  AND (
+    ev.release_id = ar.id  -- Direct match with active release
+    OR (
+      r.status = 'DEPLOYED' 
+      AND r.deploy_seq IS NOT NULL
+      AND (ar.deploy_seq IS NULL OR r.deploy_seq <= ar.deploy_seq)
+      -- Include if from a deployed release before or at the active release's deploy point
+    )
   )
 ORDER BY 
   ev.entity_id,
