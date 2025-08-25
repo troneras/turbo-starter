@@ -10,13 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
-import { Route as TranslationsSimpleRouteImport } from './routes/translations-simple'
 import { Route as TranslationsRouteImport } from './routes/translations'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as ReleasesRouteImport } from './routes/releases'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LanguagesRouteImport } from './routes/languages'
-import { Route as KeysRouteImport } from './routes/keys'
 import { Route as JurisdictionsRouteImport } from './routes/jurisdictions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BrandsRouteImport } from './routes/brands'
@@ -26,11 +24,6 @@ import { Route as TranslationsSourceKeysRouteImport } from './routes/translation
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TranslationsSimpleRoute = TranslationsSimpleRouteImport.update({
-  id: '/translations-simple',
-  path: '/translations-simple',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TranslationsRoute = TranslationsRouteImport.update({
@@ -56,11 +49,6 @@ const LoginRoute = LoginRouteImport.update({
 const LanguagesRoute = LanguagesRouteImport.update({
   id: '/languages',
   path: '/languages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KeysRoute = KeysRouteImport.update({
-  id: '/keys',
-  path: '/keys',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JurisdictionsRoute = JurisdictionsRouteImport.update({
@@ -94,13 +82,11 @@ export interface FileRoutesByFullPath {
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
   '/jurisdictions': typeof JurisdictionsRoute
-  '/keys': typeof KeysRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
   '/translations': typeof TranslationsRouteWithChildren
-  '/translations-simple': typeof TranslationsSimpleRoute
   '/users': typeof UsersRoute
   '/translations/source-keys': typeof TranslationsSourceKeysRoute
 }
@@ -109,13 +95,11 @@ export interface FileRoutesByTo {
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
   '/jurisdictions': typeof JurisdictionsRoute
-  '/keys': typeof KeysRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
   '/translations': typeof TranslationsRouteWithChildren
-  '/translations-simple': typeof TranslationsSimpleRoute
   '/users': typeof UsersRoute
   '/translations/source-keys': typeof TranslationsSourceKeysRoute
 }
@@ -125,13 +109,11 @@ export interface FileRoutesById {
   '/brands': typeof BrandsRoute
   '/dashboard': typeof DashboardRoute
   '/jurisdictions': typeof JurisdictionsRoute
-  '/keys': typeof KeysRoute
   '/languages': typeof LanguagesRoute
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
   '/translations': typeof TranslationsRouteWithChildren
-  '/translations-simple': typeof TranslationsSimpleRoute
   '/users': typeof UsersRoute
   '/translations/source-keys': typeof TranslationsSourceKeysRoute
 }
@@ -142,13 +124,11 @@ export interface FileRouteTypes {
     | '/brands'
     | '/dashboard'
     | '/jurisdictions'
-    | '/keys'
     | '/languages'
     | '/login'
     | '/releases'
     | '/roles'
     | '/translations'
-    | '/translations-simple'
     | '/users'
     | '/translations/source-keys'
   fileRoutesByTo: FileRoutesByTo
@@ -157,13 +137,11 @@ export interface FileRouteTypes {
     | '/brands'
     | '/dashboard'
     | '/jurisdictions'
-    | '/keys'
     | '/languages'
     | '/login'
     | '/releases'
     | '/roles'
     | '/translations'
-    | '/translations-simple'
     | '/users'
     | '/translations/source-keys'
   id:
@@ -172,13 +150,11 @@ export interface FileRouteTypes {
     | '/brands'
     | '/dashboard'
     | '/jurisdictions'
-    | '/keys'
     | '/languages'
     | '/login'
     | '/releases'
     | '/roles'
     | '/translations'
-    | '/translations-simple'
     | '/users'
     | '/translations/source-keys'
   fileRoutesById: FileRoutesById
@@ -188,13 +164,11 @@ export interface RootRouteChildren {
   BrandsRoute: typeof BrandsRoute
   DashboardRoute: typeof DashboardRoute
   JurisdictionsRoute: typeof JurisdictionsRoute
-  KeysRoute: typeof KeysRoute
   LanguagesRoute: typeof LanguagesRoute
   LoginRoute: typeof LoginRoute
   ReleasesRoute: typeof ReleasesRoute
   RolesRoute: typeof RolesRoute
   TranslationsRoute: typeof TranslationsRouteWithChildren
-  TranslationsSimpleRoute: typeof TranslationsSimpleRoute
   UsersRoute: typeof UsersRoute
 }
 
@@ -205,13 +179,6 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/translations-simple': {
-      id: '/translations-simple'
-      path: '/translations-simple'
-      fullPath: '/translations-simple'
-      preLoaderRoute: typeof TranslationsSimpleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/translations': {
@@ -247,13 +214,6 @@ declare module '@tanstack/react-router' {
       path: '/languages'
       fullPath: '/languages'
       preLoaderRoute: typeof LanguagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/keys': {
-      id: '/keys'
-      path: '/keys'
-      fullPath: '/keys'
-      preLoaderRoute: typeof KeysRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jurisdictions': {
@@ -311,13 +271,11 @@ const rootRouteChildren: RootRouteChildren = {
   BrandsRoute: BrandsRoute,
   DashboardRoute: DashboardRoute,
   JurisdictionsRoute: JurisdictionsRoute,
-  KeysRoute: KeysRoute,
   LanguagesRoute: LanguagesRoute,
   LoginRoute: LoginRoute,
   ReleasesRoute: ReleasesRoute,
   RolesRoute: RolesRoute,
   TranslationsRoute: TranslationsRouteWithChildren,
-  TranslationsSimpleRoute: TranslationsSimpleRoute,
   UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport

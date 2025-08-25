@@ -7,7 +7,8 @@ import {
   Filter,
   Languages,
   KeyRound,
-  MoreVertical
+  MoreVertical,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,109 +37,87 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLanguages } from '@/features/languages/hooks/use-languages';
-import { useAuth } from '@/app/hooks/use-auth';
-import type { Language } from '@cms/contracts/types/languages';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslationStats } from '@/features/translations/hooks/use-translation-stats';
+import { useCreateTranslationKey } from '@/features/translations/hooks/use-create-translation-key';
+import { AddTranslationKeyModal } from '@/features/translations/components/AddTranslationKeyModal';
 
-// Mock translation progress data
+// Translation progress data interface
 interface LanguageProgress {
   languageId: number;
   languageCode: string;
   languageName: string;
   isSource: boolean;
-  translatedKeys: number;
-  totalKeys: number;
-  approvedKeys: number;
-  pendingKeys: number;
-  draftKeys: number;
-  untranslatedKeys: number;
+  approvedCount: number;
+  needsTranslationCount: number;
+  needsReviewCount: number;
+  totalVariants: number;
   completionPercentage: number;
   approvalPercentage: number;
-  lastActivity: string;
-  trend: 'up' | 'down' | 'stable';
-  trendValue: number;
+  // Computed fields for UI compatibility
+  translatedKeys: number;
+  totalKeys: number;
+  pendingKeys: number;
+  untranslatedKeys: number;
 }
 
-// Generate mock progress data
-function generateMockProgress(language: Language, totalKeys: number = 16): LanguageProgress {
-  const isSource = language.source || false;
+// Convert stats data to UI format
+function convertStatsToProgress(stats: {
+  totalKeys: number;
+  localeStats: Array<{
+    localeId: number;
+    localeCode: string;
+    localeName: string;
+    isSource: boolean;
+    approvedCount: number;
+    needsTranslationCount: number;
+    needsReviewCount: number;
+    totalVariants: number;
+    completionPercentage: number;
+    approvalPercentage: number;
+  }>;
+}): LanguageProgress[] {
+  return stats.localeStats.map(locale => {
+    const translatedKeys = locale.approvedCount + locale.needsReviewCount;
 
-  if (isSource) {
-    // Source language is always 100% complete
     return {
-      languageId: language.id,
-      languageCode: language.code,
-      languageName: language.name,
-      isSource: true,
-      translatedKeys: totalKeys,
-      totalKeys,
-      approvedKeys: totalKeys,
-      pendingKeys: 0,
-      draftKeys: 0,
-      untranslatedKeys: 0,
-      completionPercentage: 100,
-      approvalPercentage: 100,
-      lastActivity: new Date().toISOString(),
-      trend: 'stable',
-      trendValue: 0
+      languageId: locale.localeId,
+      languageCode: locale.localeCode,
+      languageName: locale.localeName,
+      isSource: locale.isSource,
+      approvedCount: locale.approvedCount,
+      needsTranslationCount: locale.needsTranslationCount,
+      needsReviewCount: locale.needsReviewCount,
+      totalVariants: locale.totalVariants,
+      completionPercentage: locale.completionPercentage,
+      approvalPercentage: locale.approvalPercentage,
+      // Computed fields for UI compatibility
+      translatedKeys,
+      totalKeys: stats.totalKeys,
+      pendingKeys: locale.needsReviewCount,
+      untranslatedKeys: locale.needsTranslationCount,
     };
-  }
-
-  // Generate realistic progress for other languages
-  const translatedKeys = Math.floor(Math.random() * totalKeys);
-  const approvedKeys = Math.floor(translatedKeys * (0.6 + Math.random() * 0.4));
-  const pendingKeys = Math.floor((translatedKeys - approvedKeys) * 0.6);
-  const draftKeys = translatedKeys - approvedKeys - pendingKeys;
-  const untranslatedKeys = totalKeys - translatedKeys;
-
-  const completionPercentage = Math.round((translatedKeys / totalKeys) * 100);
-  const approvalPercentage = translatedKeys > 0 ? Math.round((approvedKeys / translatedKeys) * 100) : 0;
-
-  // Random trend
-  const trends: Array<'up' | 'down' | 'stable'> = ['up', 'down', 'stable'];
-  const trend = trends[Math.floor(Math.random() * trends.length)] as 'up' | 'down' | 'stable';
-  const trendValue = trend === 'stable' ? 0 : Math.floor(Math.random() * 10) + 1;
-
-  // Random last activity (within last 30 days)
-  const daysAgo = Math.floor(Math.random() * 30);
-  const lastActivity = new Date();
-  lastActivity.setDate(lastActivity.getDate() - daysAgo);
-
-  return {
-    languageId: language.id,
-    languageCode: language.code,
-    languageName: language.name,
-    isSource: false,
-    translatedKeys,
-    totalKeys,
-    approvedKeys,
-    pendingKeys,
-    draftKeys,
-    untranslatedKeys,
-    completionPercentage,
-    approvalPercentage,
-    lastActivity: lastActivity.toISOString(),
-    trend,
-    trendValue
-  };
+  });
 }
 
 export function TranslationsPage() {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'name' | 'progress' | 'activity'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'progress'>('name');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Fetch languages
-  const { data: languagesData, isLoading } = useLanguages({ pageSize: 100 });
+  // Fetch translation stats
+  const { data: statsData, isLoading } = useTranslationStats();
 
-  // Generate mock progress data
+  // Create translation key mutation
+  const createTranslationKey = useCreateTranslationKey();
+
+  // Convert stats to UI format
   const languageProgress = useMemo(() => {
-    if (!languagesData?.languages) return [];
-    return languagesData.languages.map(lang => generateMockProgress(lang));
-  }, [languagesData]);
+    if (!statsData) return [];
+    return convertStatsToProgress(statsData);
+  }, [statsData]);
 
   // Filter and sort languages
   const filteredLanguages = useMemo(() => {
@@ -170,9 +149,6 @@ export function TranslationsPage() {
       case 'progress':
         filtered.sort((a, b) => b.completionPercentage - a.completionPercentage);
         break;
-      case 'activity':
-        filtered.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
-        break;
       default:
         filtered.sort((a, b) => {
           // Source language always first
@@ -192,13 +168,41 @@ export function TranslationsPage() {
       // Navigate to source keys view
       navigate({ to: '/translations/source-keys', search: { locale: language.languageCode } });
     } else {
-      // For now, navigate to the old translations view
       // TODO: Create a language-specific translations view
-      window.location.href = `/translations-simple?language=${language.languageCode}`;
+      // For now, just navigate to source keys view for all languages
+      navigate({ to: '/translations/source-keys', search: { locale: language.languageCode } });
     }
   };
 
-  const canManageTranslations = hasPermission('translations:create') || hasPermission('translations:edit');
+  const handleAddTranslationKey = async (data: {
+    sourceKey: string;
+    sourceContent: string;
+    translationNote?: string;
+    autoTranslateWithAI: boolean;
+    stringType: string;
+    hasCharacterLimit: boolean;
+    characterLimit?: number;
+  }) => {
+    try {
+      await createTranslationKey.mutateAsync({
+        entityKey: data.sourceKey,
+        description: data.translationNote || undefined,
+        defaultValue: data.sourceContent,
+        status: 'APPROVED', // Default to approved since this is the source content
+        metadata: {
+          maxLength: data.hasCharacterLimit ? data.characterLimit : undefined,
+          comments: data.translationNote || undefined,
+          autoTranslateWithAI: data.autoTranslateWithAI,
+          hasCharacterLimit: data.hasCharacterLimit,
+        },
+      });
+
+      // Success feedback could be added here (toast notification, etc.)
+    } catch (error) {
+      // Error handling could be added here (toast notification, etc.)
+      console.error('Failed to create translation key:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -219,9 +223,19 @@ export function TranslationsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Languages</CardTitle>
-            <Button variant="ghost" size="sm">
-              <Settings className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsAddModalOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Content
+              </Button>
+              <Button variant="ghost" size="sm">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -257,7 +271,6 @@ export function TranslationsPage() {
               <SelectContent>
                 <SelectItem value="name">Sort by Name</SelectItem>
                 <SelectItem value="progress">Sort by Progress</SelectItem>
-                <SelectItem value="activity">Sort by Activity</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -306,10 +319,23 @@ export function TranslationsPage() {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">
-                              {language.completionPercentage}% Complete
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium">
+                              {language.completionPercentage}% Finalized
                             </span>
+                            <span className="text-muted-foreground">
+                              {Math.round((language.needsTranslationCount / language.totalKeys) * 100)}% Needs Translation
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs text-muted-foreground">
+                              {language.approvedCount} finalized translations
+                            </div>
+                            {language.needsTranslationCount > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                {language.needsTranslationCount} translation{language.needsTranslationCount !== 1 ? 's' : ''} with changed source
+                              </div>
+                            )}
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
@@ -359,6 +385,14 @@ export function TranslationsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Translation Key Modal */}
+      <AddTranslationKeyModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddTranslationKey}
+        isLoading={createTranslationKey.isPending}
+      />
     </div>
   );
 }

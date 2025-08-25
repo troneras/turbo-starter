@@ -46,6 +46,13 @@ export default async function (fastify: FastifyInstance) {
                 request.releaseContext?.releaseId
             )
 
+            // TODO: Trigger machine translations for empty variants if autoTranslateWithAI is enabled
+            // This will be implemented once the event system is ready
+            if (data.metadata?.autoTranslateWithAI) {
+                // Event system integration pending
+                fastify.log.info('Auto-translation with AI requested for key:', data.entityKey)
+            }
+
             reply.code(201)
             return result
         } catch (error: any) {

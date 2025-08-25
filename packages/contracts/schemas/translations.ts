@@ -208,17 +208,21 @@ export const TranslationListResponseSchema = Type.Object({
 })
 
 export const TranslationStatsResponseSchema = Type.Object({
-  totalKeys: Type.Number(),
-  totalTranslations: Type.Number(),
-  draftCount: Type.Number(),
-  pendingCount: Type.Number(),
-  approvedCount: Type.Number(),
-  localeCoverage: Type.Record(Type.String(), Type.Object({
-    total: Type.Number(),
-    approved: Type.Number(),
-  })),
+  totalKeys: Type.Number({ description: "Total number of translation keys" }),
+  localeStats: Type.Array(Type.Object({
+    localeId: Type.Number({ description: "Locale ID" }),
+    localeCode: Type.String({ description: "Locale code (e.g., 'en', 'de')" }),
+    localeName: Type.String({ description: "Locale display name" }),
+    isSource: Type.Boolean({ description: "Whether this is the source locale" }),
+    approvedCount: Type.Number({ description: "Number of approved translations" }),
+    needsTranslationCount: Type.Number({ description: "Number of keys needing translation" }),
+    needsReviewCount: Type.Number({ description: "Number of translations needing review" }),
+    totalVariants: Type.Number({ description: "Total number of translation variants for this locale" }),
+    completionPercentage: Type.Number({ description: "Percentage of keys that have translations (approved + needs review)" }),
+    approvalPercentage: Type.Number({ description: "Percentage of translated keys that are approved" })
+  }), { description: "Statistics per locale" })
 }, {
-  description: "Translation statistics"
+  description: "Translation statistics with per-locale breakdown"
 })
 
 // Import/Export schemas
@@ -301,6 +305,8 @@ export const CreateUnifiedTranslationRequestSchema = Type.Object({
     maxLength: Type.Optional(Type.Number()),
     pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
     comments: Type.Optional(Type.String()),
+    autoTranslateWithAI: Type.Optional(Type.Boolean({ description: "Whether to trigger AI auto-translation for empty variants" })),
+    hasCharacterLimit: Type.Optional(Type.Boolean({ description: "Whether a character limit is enforced" })),
   })),
   additionalVariants: Type.Optional(Type.Array(Type.Object({
     localeId: Type.Number({ description: "Locale ID for this variant" }),
