@@ -36,4 +36,10 @@ export const entityTypeEnum = pgEnum('entity_type_enum', [
   'template',
   'media',
   'user_preference'
-]) 
+])
+
+export const translationStatusEnum = pgEnum('translation_status', [
+  'NEEDS_TRANSLATION',
+  'NEEDS_REVIEW',
+  'APPROVED'
+])

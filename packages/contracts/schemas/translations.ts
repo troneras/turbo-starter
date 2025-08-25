@@ -3,8 +3,8 @@ import { PaginationQuerySchema } from "./common.js"
 
 // Translation status enum
 export const TranslationStatus = Type.Union([
-  Type.Literal("DRAFT"),
-  Type.Literal("PENDING"),
+  Type.Literal("NEEDS_TRANSLATION"),
+  Type.Literal("NEEDS_REVIEW"),
   Type.Literal("APPROVED"),
 ], {
   description: "Translation approval status"

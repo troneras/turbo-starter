@@ -58,7 +58,7 @@ ALTER TABLE entity_versions
 ADD CONSTRAINT check_translation_status
 CHECK (
   entity_type != 'translation' OR 
-  status IN ('DRAFT', 'PENDING', 'APPROVED')
+  status IN ('NEEDS_TRANSLATION', 'NEEDS_REVIEW', 'APPROVED')
 );
 
 -- =============================================================================

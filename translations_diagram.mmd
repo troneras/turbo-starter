@@ -1,0 +1,77 @@
+graph TB
+    subgraph "Client Applications"
+        CLI[CLI Tool]
+        WEB[Web Admin]
+        API_CLIENT[API Client]
+    end
+
+    subgraph "New Unified Translation API"
+        UNIFIED["/api/translations/unified<br/>POST - One-shot creation"]
+        BATCH["/api/translations/batch<br/>POST - Bulk operations"]
+        CSV["/api/translations/batch/csv-import<br/>POST - CSV import"]
+    end
+
+    subgraph "Existing Translation API"
+        KEYS["/api/translations/keys<br/>CRUD operations"]
+        VARIANTS["/api/translations/variants<br/>CRUD operations"]
+    end
+
+    subgraph "Translation Service Layer"
+        UNIFIED_SVC[createUnifiedTranslation]
+        BATCH_SVC[batchCreateTranslations]
+        CSV_SVC[importFromCsv]
+        KEY_SVC[createKey, updateKey, deleteKey]
+        VARIANT_SVC[createVariant, updateVariant, deleteVariant]
+    end
+
+    subgraph "Entity Service Layer"
+        KEY_ENTITY[Translation Key Entity]
+        VARIANT_ENTITY[Translation Variant Entity]
+    end
+
+    subgraph "Database"
+        DB[(PostgreSQL<br/>entity_versions table)]
+    end
+
+    %% Client to API connections
+    CLI --> UNIFIED
+    CLI --> BATCH
+    CLI --> CSV
+    WEB --> UNIFIED
+    WEB --> KEYS
+    WEB --> VARIANTS
+    API_CLIENT --> BATCH
+    API_CLIENT --> CSV
+
+    %% API to Service connections
+    UNIFIED --> UNIFIED_SVC
+    BATCH --> BATCH_SVC
+    CSV --> CSV_SVC
+    KEYS --> KEY_SVC
+    VARIANTS --> VARIANT_SVC
+
+    %% Service layer connections
+    UNIFIED_SVC --> KEY_SVC
+    UNIFIED_SVC --> VARIANT_SVC
+    BATCH_SVC --> KEY_SVC
+    BATCH_SVC --> VARIANT_SVC
+    CSV_SVC --> BATCH_SVC
+
+    %% Entity connections
+    KEY_SVC --> KEY_ENTITY
+    VARIANT_SVC --> VARIANT_ENTITY
+    KEY_ENTITY --> DB
+    VARIANT_ENTITY --> DB
+
+    %% Styling
+    classDef newAPI fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef existingAPI fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef service fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef entity fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef database fill:#ffebee,stroke:#c62828,stroke-width:2px
+
+    class UNIFIED,BATCH,CSV newAPI
+    class KEYS,VARIANTS existingAPI
+    class UNIFIED_SVC,BATCH_SVC,CSV_SVC,KEY_SVC,VARIANT_SVC service
+    class KEY_ENTITY,VARIANT_ENTITY entity
+    class DB database

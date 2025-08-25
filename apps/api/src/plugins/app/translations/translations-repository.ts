@@ -4,7 +4,7 @@ import type { EntityService, EntitySpec, Entity } from '../entity';
 /* ------------------------------------------------------------------ */
 /* 1.  Contract types (already exist in @cms/contracts)               */
 /* ------------------------------------------------------------------ */
-export type VariantStatus = 'DRAFT' | 'PENDING' | 'APPROVED';
+export type VariantStatus = 'NEEDS_TRANSLATION' | 'NEEDS_REVIEW' | 'APPROVED';
 
 export interface TranslationKeyDto {
   id: number;
@@ -61,7 +61,7 @@ const variantSpec: EntitySpec<VariantPayload> = {
   typedCols: ['entityKey', 'status', 'brandId', 'jurisdictionId', 'localeId', 'value'],   // mapped to actual columns in entity_versions
   uniqueKeys: ['entityKey', 'localeId', 'brandId'], // Each variant is unique by key + locale + brand combination
   validate: (draft: Partial<VariantPayload>) => {
-    if (!draft.entityKey || !draft.localeId || !draft.value) throw new Error('entityKey & localeId & value required');
+    if (!draft.entityKey || !draft.localeId) throw new Error('entityKey & localeId are required');
   }
 };
 
@@ -170,7 +170,7 @@ export function translationService(fastify: FastifyInstance) {
           entityKey: data.entityKey,
           localeId: data.localeId,
           value: data.value,
-          status: data.status ?? 'DRAFT',
+          status: data.status ?? 'NEEDS_TRANSLATION',
           brandId: data.brandId ?? null
         },
         { userId, releaseId }
@@ -244,14 +244,19 @@ export function translationService(fastify: FastifyInstance) {
           entityKey: data.entityKey,
           localeId: defaultLocaleId,
           value: data.defaultValue,
-          status: data.status ?? 'DRAFT',
+          status: data.status ?? 'APPROVED',
           brandId: data.brandId ?? null
         },
         { userId, releaseId }
       );
 
+      // Get all available locales to create empty variants
+      const allLocales = await this.getLocales();
+
       // Create additional variants if provided
       const additionalVariants = [];
+      const providedLocaleIds = new Set([defaultLocaleId]); // Track locales that already have variants
+
       if (data.additionalVariants && data.additionalVariants.length > 0) {
         for (const variantData of data.additionalVariants) {
           const variant = await variantSvc.create(
@@ -259,19 +264,41 @@ export function translationService(fastify: FastifyInstance) {
               entityKey: data.entityKey,
               localeId: variantData.localeId,
               value: variantData.value,
-              status: variantData.status ?? 'DRAFT',
+              status: variantData.status ?? 'APPROVED',
               brandId: variantData.brandId ?? data.brandId ?? null
             },
             { userId, releaseId }
           );
           additionalVariants.push(mapVar(variant));
+          providedLocaleIds.add(variantData.localeId); // Mark this locale as having a variant
         }
       }
+
+      // Create empty variants only for locales that don't have any variant
+      const emptyVariants = [];
+      for (const locale of allLocales) {
+        if (!providedLocaleIds.has(locale.id)) {
+          const variant = await variantSvc.create(
+            {
+              entityKey: data.entityKey,
+              localeId: locale.id,
+              value: '', // Empty value for translation
+              status: 'NEEDS_TRANSLATION',
+              brandId: data.brandId ?? null
+            },
+            { userId, releaseId }
+          );
+          emptyVariants.push(mapVar(variant));
+        }
+      }
+
+      // Combine all variants (empty + additional)
+      const allVariants = [...emptyVariants, ...additionalVariants];
 
       return {
         key: mapKey(key),
         defaultVariant: mapVar(defaultVariant),
-        additionalVariants: additionalVariants.length > 0 ? additionalVariants : undefined
+        additionalVariants: allVariants.length > 0 ? allVariants : undefined
       };
     },
 
@@ -364,7 +391,7 @@ export function translationService(fastify: FastifyInstance) {
                     existingVariants.data[0]!.entityId,
                     {
                       value: translation.value,
-                      status: translation.status ?? 'DRAFT'
+                      status: translation.status ?? 'NEEDS_TRANSLATION'
                     },
                     { userId, releaseId }
                   );
@@ -384,7 +411,7 @@ export function translationService(fastify: FastifyInstance) {
                     entityKey,
                     localeId: translation.localeId,
                     value: translation.value,
-                    status: translation.status ?? 'DRAFT',
+                    status: translation.status ?? 'NEEDS_TRANSLATION',
                     brandId: data.defaultBrandId ?? null
                   },
                   { userId, releaseId }
