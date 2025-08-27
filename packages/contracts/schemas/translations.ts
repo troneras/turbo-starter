@@ -272,11 +272,7 @@ export const TranslationVariantQuerySchema = Type.Intersect([
     entityKey: Type.Optional(Type.String({ description: "Filter by entity key" })),
     localeId: Type.Optional(Type.Number({ description: "Filter by locale ID" })),
     brandId: Type.Optional(Type.Number({ description: "Filter by brand ID" })),
-    status: Type.Optional(Type.Union([
-      Type.Literal('DRAFT'),
-      Type.Literal('PENDING'),
-      Type.Literal('APPROVED')
-    ], { description: "Filter by translation status" }))
+    status: Type.Optional(TranslationStatus)
   }),
   PaginationQuerySchema
 ], {
@@ -411,4 +407,54 @@ export const TranslationCsvImportRequestSchema = Type.Object({
 }, {
   additionalProperties: false,
   description: "Request to import translations from CSV"
+})
+
+// ── Source Language Operations ──────────────────────────────────
+
+export const SourceLanguageTranslationSchema = Type.Object({
+  id: Type.Number({ description: "Translation key entity ID" }),
+  entityKey: Type.String({ description: "The translation key identifier" }),
+  value: Type.String({ description: "The source language text value" }),
+  description: Type.Union([Type.String(), Type.Null()], {
+    description: "Description of the translation key for editors"
+  }),
+  status: TranslationStatus,
+  metadata: Type.Optional(Type.Object({
+    maxLength: Type.Optional(Type.Number()),
+    pluralForms: Type.Optional(Type.Record(Type.String(), Type.String())),
+    comments: Type.Optional(Type.String()),
+  })),
+  usageCount: Type.Optional(Type.Number({ description: "Number of places this key is used" })),
+  createdBy: Type.String({ format: "uuid", description: "User who created the key" }),
+  createdAt: Type.String({ format: "date-time", description: "Creation timestamp" }),
+  updatedBy: Type.Union([Type.String({ format: "uuid" }), Type.Null()], {
+    description: "User who last updated the translation"
+  }),
+  updatedAt: Type.Union([Type.String({ format: "date-time" }), Type.Null()], {
+    description: "Last update timestamp"
+  }),
+}, {
+  description: "Source language translation with key and variant data combined"
+})
+
+export const SourceLanguageQuerySchema = Type.Intersect([
+  Type.Object({
+    search: Type.Optional(Type.String({ description: "Search in keys, values, or descriptions" })),
+    status: Type.Optional(TranslationStatus),
+    hasDescription: Type.Optional(Type.Boolean({ description: "Filter by presence of description" })),
+    sortBy: Type.Optional(Type.Union([
+      Type.Literal("key"),
+      Type.Literal("value"),
+      Type.Literal("updated"),
+      Type.Literal("created"),
+      Type.Literal("usage")
+    ], { default: "key", description: "Sort field" })),
+    sortOrder: Type.Optional(Type.Union([
+      Type.Literal("asc"),
+      Type.Literal("desc")
+    ], { default: "asc", description: "Sort order" }))
+  }),
+  PaginationQuerySchema
+], {
+  description: "Query parameters for source language translations endpoint"
 })

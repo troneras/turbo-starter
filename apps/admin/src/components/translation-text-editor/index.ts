@@ -1,0 +1,1 @@
+export { TranslationTextEditor } from './translation-text-editor';

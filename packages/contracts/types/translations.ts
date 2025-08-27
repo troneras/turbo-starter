@@ -25,7 +25,9 @@ import {
     BatchTranslationItemSchema,
     BatchTranslationRequestSchema,
     BatchTranslationResultSchema,
-    TranslationCsvImportRequestSchema
+    TranslationCsvImportRequestSchema,
+    SourceLanguageTranslationSchema,
+    SourceLanguageQuerySchema
 } from "../schemas/translations.js"
 
 /**
@@ -280,3 +282,39 @@ export type BatchTranslationResult = Static<typeof BatchTranslationResultSchema>
  * ```
  */
 export type TranslationCsvImportRequest = Static<typeof TranslationCsvImportRequestSchema>
+
+// ── Source Language Operations ──────────────────────────────────
+
+/**
+ * Source language translation with combined key and variant data.
+ * 
+ * @description Represents a translation key along with its source language
+ * variant data in a single object for efficient display in tables and forms.
+ * This combines data from both the translation key entity and its corresponding
+ * source language translation variant.
+ * 
+ * @example
+ * ```typescript
+ * const sourceTranslation: SourceLanguageTranslation = {
+ *   id: 123,
+ *   entityKey: "checkout.button.confirm",
+ *   value: "Confirm Purchase",
+ *   description: "Confirm button in checkout flow",
+ *   status: "APPROVED",
+ *   usageCount: 5,
+ *   createdBy: "550e8400-e29b-41d4-a716-446655440000",
+ *   createdAt: "2025-07-30T10:00:00Z",
+ *   updatedBy: "660e8400-e29b-41d4-a716-446655440001",
+ *   updatedAt: "2025-07-30T11:00:00Z"
+ * }
+ * ```
+ */
+export type SourceLanguageTranslation = Static<typeof SourceLanguageTranslationSchema>
+
+/**
+ * Query parameters for source language translations endpoint.
+ * 
+ * @description Supports search, filtering, sorting, and pagination
+ * for the source language translations table view.
+ */
+export type SourceLanguageQuery = Static<typeof SourceLanguageQuerySchema>

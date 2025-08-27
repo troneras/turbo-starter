@@ -165,8 +165,8 @@ export function TranslationsPage() {
 
   const handleLanguageClick = (language: LanguageProgress) => {
     if (language.isSource) {
-      // Navigate to source keys view
-      navigate({ to: '/translations/source-keys', search: { locale: language.languageCode } });
+      // Navigate to source language view
+      navigate({ to: '/translations/source-language' });
     } else {
       // TODO: Create a language-specific translations view
       // For now, just navigate to source keys view for all languages

@@ -19,7 +19,10 @@ import { Route as JurisdictionsRouteImport } from './routes/jurisdictions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as BrandsRouteImport } from './routes/brands'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TranslationsIndexRouteImport } from './routes/translations.index'
+import { Route as TranslationsSourceLanguageRouteImport } from './routes/translations.source-language'
 import { Route as TranslationsSourceKeysRouteImport } from './routes/translations.source-keys'
+import { Route as TranslationsSourceLanguageKeyEditRouteImport } from './routes/translations.source-language.$key.edit'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -71,11 +74,28 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TranslationsIndexRoute = TranslationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TranslationsRoute,
+} as any)
+const TranslationsSourceLanguageRoute =
+  TranslationsSourceLanguageRouteImport.update({
+    id: '/source-language',
+    path: '/source-language',
+    getParentRoute: () => TranslationsRoute,
+  } as any)
 const TranslationsSourceKeysRoute = TranslationsSourceKeysRouteImport.update({
   id: '/source-keys',
   path: '/source-keys',
   getParentRoute: () => TranslationsRoute,
 } as any)
+const TranslationsSourceLanguageKeyEditRoute =
+  TranslationsSourceLanguageKeyEditRouteImport.update({
+    id: '/$key/edit',
+    path: '/$key/edit',
+    getParentRoute: () => TranslationsSourceLanguageRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +109,9 @@ export interface FileRoutesByFullPath {
   '/translations': typeof TranslationsRouteWithChildren
   '/users': typeof UsersRoute
   '/translations/source-keys': typeof TranslationsSourceKeysRoute
+  '/translations/source-language': typeof TranslationsSourceLanguageRouteWithChildren
+  '/translations/': typeof TranslationsIndexRoute
+  '/translations/source-language/$key/edit': typeof TranslationsSourceLanguageKeyEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -99,9 +122,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/releases': typeof ReleasesRoute
   '/roles': typeof RolesRoute
-  '/translations': typeof TranslationsRouteWithChildren
   '/users': typeof UsersRoute
   '/translations/source-keys': typeof TranslationsSourceKeysRoute
+  '/translations/source-language': typeof TranslationsSourceLanguageRouteWithChildren
+  '/translations': typeof TranslationsIndexRoute
+  '/translations/source-language/$key/edit': typeof TranslationsSourceLanguageKeyEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +141,9 @@ export interface FileRoutesById {
   '/translations': typeof TranslationsRouteWithChildren
   '/users': typeof UsersRoute
   '/translations/source-keys': typeof TranslationsSourceKeysRoute
+  '/translations/source-language': typeof TranslationsSourceLanguageRouteWithChildren
+  '/translations/': typeof TranslationsIndexRoute
+  '/translations/source-language/$key/edit': typeof TranslationsSourceLanguageKeyEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +159,9 @@ export interface FileRouteTypes {
     | '/translations'
     | '/users'
     | '/translations/source-keys'
+    | '/translations/source-language'
+    | '/translations/'
+    | '/translations/source-language/$key/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -141,9 +172,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/releases'
     | '/roles'
-    | '/translations'
     | '/users'
     | '/translations/source-keys'
+    | '/translations/source-language'
+    | '/translations'
+    | '/translations/source-language/$key/edit'
   id:
     | '__root__'
     | '/'
@@ -157,6 +190,9 @@ export interface FileRouteTypes {
     | '/translations'
     | '/users'
     | '/translations/source-keys'
+    | '/translations/source-language'
+    | '/translations/'
+    | '/translations/source-language/$key/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -244,6 +280,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/translations/': {
+      id: '/translations/'
+      path: '/'
+      fullPath: '/translations/'
+      preLoaderRoute: typeof TranslationsIndexRouteImport
+      parentRoute: typeof TranslationsRoute
+    }
+    '/translations/source-language': {
+      id: '/translations/source-language'
+      path: '/source-language'
+      fullPath: '/translations/source-language'
+      preLoaderRoute: typeof TranslationsSourceLanguageRouteImport
+      parentRoute: typeof TranslationsRoute
+    }
     '/translations/source-keys': {
       id: '/translations/source-keys'
       path: '/source-keys'
@@ -251,15 +301,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TranslationsSourceKeysRouteImport
       parentRoute: typeof TranslationsRoute
     }
+    '/translations/source-language/$key/edit': {
+      id: '/translations/source-language/$key/edit'
+      path: '/$key/edit'
+      fullPath: '/translations/source-language/$key/edit'
+      preLoaderRoute: typeof TranslationsSourceLanguageKeyEditRouteImport
+      parentRoute: typeof TranslationsSourceLanguageRoute
+    }
   }
 }
 
+interface TranslationsSourceLanguageRouteChildren {
+  TranslationsSourceLanguageKeyEditRoute: typeof TranslationsSourceLanguageKeyEditRoute
+}
+
+const TranslationsSourceLanguageRouteChildren: TranslationsSourceLanguageRouteChildren =
+  {
+    TranslationsSourceLanguageKeyEditRoute:
+      TranslationsSourceLanguageKeyEditRoute,
+  }
+
+const TranslationsSourceLanguageRouteWithChildren =
+  TranslationsSourceLanguageRoute._addFileChildren(
+    TranslationsSourceLanguageRouteChildren,
+  )
+
 interface TranslationsRouteChildren {
   TranslationsSourceKeysRoute: typeof TranslationsSourceKeysRoute
+  TranslationsSourceLanguageRoute: typeof TranslationsSourceLanguageRouteWithChildren
+  TranslationsIndexRoute: typeof TranslationsIndexRoute
 }
 
 const TranslationsRouteChildren: TranslationsRouteChildren = {
   TranslationsSourceKeysRoute: TranslationsSourceKeysRoute,
+  TranslationsSourceLanguageRoute: TranslationsSourceLanguageRouteWithChildren,
+  TranslationsIndexRoute: TranslationsIndexRoute,
 }
 
 const TranslationsRouteWithChildren = TranslationsRoute._addFileChildren(

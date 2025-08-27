@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { EntityService, EntitySpec, Entity } from '../entity';
+import { sql } from 'drizzle-orm';
 
 /* ------------------------------------------------------------------ */
 /* 1.  Contract types (already exist in @cms/contracts)               */
@@ -575,6 +576,348 @@ export function translationService(fastify: FastifyInstance) {
     async getSourceLocale() {
       // Get the source locale for translation workflows
       return await fastify.locales.getSourceLocale();
+    },
+
+    // ── Source Language Operations ──────────────────────────────────
+    async listSourceLanguageTranslations(
+      filter: {
+        search?: string;
+        status?: VariantStatus;
+        hasDescription?: boolean;
+        sortBy?: 'key' | 'value' | 'updated' | 'created' | 'usage';
+        sortOrder?: 'asc' | 'desc';
+      } = {},
+      options?: { releaseId?: number; page?: number; pageSize?: number }
+    ) {
+      // Get the source locale
+      const sourceLocale = await this.getSourceLocale();
+      if (!sourceLocale) {
+        throw new Error('Source locale not configured');
+      }
+
+      // Use the existing variantSvc to find translations for the source locale
+      const result = await variantSvc.find(
+        {
+          localeId: sourceLocale.id
+        },
+        {
+          releaseId: options?.releaseId,
+          page: options?.page,
+          pageSize: options?.pageSize,
+          orderBy: 'entityKey', // Order by entity_key
+          orderDirection: 'ASC'
+        }
+      );
+
+      // Map the results to the expected format (mapVar already converts to DTO format)
+      const sourceTranslations = result.data.map(variant => {
+        const dto = mapVar(variant);
+        return {
+          id: dto.id,
+          entityKey: dto.entityKey,
+          value: dto.value,
+          description: null, // Description would come from translation_key, not variant
+          status: dto.status,
+          metadata: undefined,
+          usageCount: 0,
+          createdBy: dto.createdBy,
+          createdAt: dto.createdAt,
+          updatedBy: dto.createdBy,
+          updatedAt: dto.createdAt,
+        };
+      });
+
+      return {
+        data: sourceTranslations,
+        pagination: result.pagination
+      };
+    },
+
+    // Get a single source language translation by ID
+    async getSourceLanguageTranslation(
+      keyId: string,
+      options?: { releaseId?: number }
+    ) {
+      // Get the source locale
+      const sourceLocale = await this.getSourceLocale();
+      if (!sourceLocale) {
+        throw new Error('Source locale not configured');
+      }
+
+      // Get the key first
+      const keyIdNum = parseInt(keyId, 10);
+      if (isNaN(keyIdNum)) {
+        return null;
+      }
+      const key = await keySvc.get(keyIdNum, { releaseId: options?.releaseId });
+      if (!key) {
+        console.log('Key not found', keyIdNum, options?.releaseId);
+        return null;
+      }
+
+
+      // Get the variant for source locale
+      const variants = await variantSvc.find(
+        {
+          entityKey: key.entityKey,
+          localeId: sourceLocale.id
+        },
+        { releaseId: options?.releaseId }
+      );
+
+      const variant = variants.data[0];
+      if (!variant) {
+        // Return key with empty variant data if no variant exists
+        return {
+          id: key.entityId,
+          entityKey: key.entityKey,
+          description: key.description,
+          value: '',
+          status: 'NEEDS_TRANSLATION' as VariantStatus,
+          createdBy: key.createdBy,
+          createdAt: iso(key.createdAt),
+          updatedBy: null,
+          updatedAt: null,
+          needsUpdate: false
+        };
+      }
+
+      // Map to SourceLanguageTranslation format
+      return {
+        id: key.entityId,
+        entityKey: key.entityKey,
+        description: key.description,
+        value: variant.value || '',
+        status: variant.status || 'NEEDS_TRANSLATION',
+        createdBy: key.createdBy,
+        createdAt: iso(key.createdAt),
+        updatedBy: variant.createdBy,
+        updatedAt: iso(variant.createdAt),
+        needsUpdate: false
+      };
+    },
+
+    // Get a single source language translation by entity key
+    async getSourceLanguageTranslationByKey(
+      entityKey: string,
+      options?: { releaseId?: number }
+    ) {
+      // Get the source locale
+      const sourceLocale = await this.getSourceLocale();
+      if (!sourceLocale) {
+        throw new Error('Source locale not configured');
+      }
+
+      // Find the key by entityKey
+      const key = await keySvc.getByEntityKey(entityKey, { releaseId: options?.releaseId });
+
+      if (!key) {
+        console.log('Key not found by entityKey', entityKey, options?.releaseId);
+        return null;
+      }
+
+      // Get the variant for source locale
+      const variants = await variantSvc.find(
+        {
+          entityKey: key.entityKey,
+          localeId: sourceLocale.id
+        },
+        { releaseId: options?.releaseId }
+      );
+
+      const variant = variants.data[0];
+      if (!variant) {
+        // Return key with empty variant data if no variant exists
+        return {
+          id: key.entityId,
+          entityKey: key.entityKey,
+          description: key.description,
+          value: '',
+          status: 'NEEDS_TRANSLATION' as VariantStatus,
+          createdBy: iso(key.createdBy),
+          createdAt: iso(key.createdAt),
+          updatedBy: null,
+          updatedAt: null,
+          needsUpdate: false
+        };
+      }
+
+      // Map to SourceLanguageTranslation format
+      return {
+        id: key.entityId,
+        entityKey: key.entityKey,
+        description: key.description,
+        value: variant.value || '',
+        status: variant.status || 'NEEDS_TRANSLATION',
+        createdBy: key.createdBy,
+        createdAt: iso(key.createdAt),
+        updatedBy: variant.createdBy,
+        updatedAt: iso(variant.createdAt),
+        needsUpdate: false
+      };
+    },
+
+    // Update a source language translation
+    async updateSourceLanguageTranslation(
+      keyId: string,
+      data: {
+        value?: string;
+        description?: string;
+        needsUpdate?: boolean;
+        charLimit?: number;
+      },
+      options: { releaseId?: number; userId: string }
+    ) {
+      // Get the source locale
+      const sourceLocale = await this.getSourceLocale();
+      if (!sourceLocale) {
+        throw new Error('Source locale not configured');
+      }
+
+      // Get the key first
+      const keyIdNum = parseInt(keyId, 10);
+      if (isNaN(keyIdNum)) {
+        return null;
+      }
+      const key = await keySvc.get(keyIdNum, { releaseId: options?.releaseId });
+      if (!key) {
+        return null;
+      }
+
+      // Update the key description if provided
+      if (data.description !== undefined) {
+        await keySvc.patch(
+          keyIdNum,
+          { description: data.description },
+          { userId: options.userId, releaseId: options?.releaseId }
+        );
+      }
+
+      // Update or create the variant for source locale
+      if (data.value !== undefined) {
+        const variants = await variantSvc.find(
+          {
+            entityKey: key.entityKey,
+            localeId: sourceLocale.id
+          },
+          { releaseId: options?.releaseId }
+        );
+
+        const variant = variants.data[0];
+        if (variant) {
+          // Update existing variant
+          await variantSvc.patch(
+            variant.entityId,
+            {
+              value: data.value,
+              status: 'APPROVED' as VariantStatus
+            },
+            { userId: options.userId, releaseId: options?.releaseId }
+          );
+        } else {
+          // Create new variant
+          await variantSvc.create(
+            {
+              entityKey: key.entityKey,
+              localeId: sourceLocale.id,
+              value: data.value,
+              status: 'APPROVED' as VariantStatus
+            },
+            { userId: options.userId, releaseId: options?.releaseId }
+          );
+        }
+      }
+
+      // Mark other translations as needing update if requested
+      if (data.needsUpdate) {
+        // This would update all non-source locale variants to NEEDS_TRANSLATION status
+        // Implementation depends on your business logic
+      }
+
+      // Return the updated translation
+      return this.getSourceLanguageTranslation(keyId, options);
+    },
+
+    // Update a source language translation by entity key
+    async updateSourceLanguageTranslationByKey(
+      entityKey: string,
+      data: {
+        value?: string;
+        description?: string;
+        needsUpdate?: boolean;
+        charLimit?: number;
+      },
+      options: { releaseId?: number; userId: string }
+    ) {
+      // Get the source locale
+      const sourceLocale = await this.getSourceLocale();
+      if (!sourceLocale) {
+        throw new Error('Source locale not configured');
+      }
+
+      // Find the key by entityKey
+      const keys = await keySvc.find(
+        { entityKey },
+        { releaseId: options?.releaseId }
+      );
+
+      const key = keys.data[0];
+      if (!key) {
+        return null;
+      }
+
+      // Update the key description if provided
+      if (data.description !== undefined) {
+        await keySvc.patch(
+          key.entityId,
+          { description: data.description },
+          { userId: options.userId, releaseId: options?.releaseId }
+        );
+      }
+
+      // Update or create the variant for source locale
+      if (data.value !== undefined) {
+        const variants = await variantSvc.find(
+          {
+            entityKey: key.entityKey,
+            localeId: sourceLocale.id
+          },
+          { releaseId: options?.releaseId }
+        );
+
+        const variant = variants.data[0];
+        if (variant) {
+          // Update existing variant
+          await variantSvc.patch(
+            variant.entityId,
+            {
+              value: data.value,
+              status: 'APPROVED' as VariantStatus
+            },
+            { userId: options.userId, releaseId: options?.releaseId }
+          );
+        } else {
+          // Create new variant
+          await variantSvc.create(
+            {
+              entityKey: key.entityKey,
+              localeId: sourceLocale.id,
+              value: data.value,
+              status: 'APPROVED' as VariantStatus
+            },
+            { userId: options.userId, releaseId: options?.releaseId }
+          );
+        }
+      }
+
+      // Mark other translations as needing update if requested
+      if (data.needsUpdate) {
+        // This would update all non-source locale variants to NEEDS_TRANSLATION status
+        // Implementation depends on your business logic
+      }
+
+      // Return the updated translation
+      return this.getSourceLanguageTranslationByKey(entityKey, options);
     }
   };
 }

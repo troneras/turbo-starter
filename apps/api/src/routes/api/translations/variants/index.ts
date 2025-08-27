@@ -11,7 +11,8 @@ import {
 import type {
   TranslationVariant,
   CreateTranslationVariantRequest,
-  UpdateTranslationVariantRequest
+  UpdateTranslationVariantRequest,
+  TranslationStatus
 } from '@cms/contracts/types/translations'
 import { Type } from '@sinclair/typebox'
 
@@ -40,7 +41,7 @@ export default async function (fastify: FastifyInstance) {
       entityKey?: string
       localeId?: number
       brandId?: number
-      status?: 'DRAFT' | 'PENDING' | 'APPROVED'
+      status?: TranslationStatus
       page?: number
       pageSize?: number
     }
@@ -85,7 +86,7 @@ export default async function (fastify: FastifyInstance) {
           entityKey: data.entityKey,
           localeId: data.localeId,
           value: data.value,
-          status: data.status ?? 'DRAFT',
+          status: data.status ?? 'NEEDS_TRANSLATION',
           brandId: data.brandId ?? null
         },
         (request.user as any).sub,
@@ -171,7 +172,7 @@ export default async function (fastify: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const variantId = parseInt(id, 10)
-    const { status } = request.body as { status: 'DRAFT' | 'PENDING' | 'APPROVED' }
+    const { status } = request.body as { status: TranslationStatus }
 
     try {
       const variant = await fastify.translations.setStatus(

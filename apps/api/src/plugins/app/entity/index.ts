@@ -531,6 +531,18 @@ export class EntityService<P extends EntityPayload> {
     const [row] = result as any[];
     return row ? this.rowToDomain(row) : null;
   }
+
+  async getByEntityKey(entityKey: string, ctx: { releaseId?: number } = {}): Promise<Entity<P> | null> {
+    const result = await withRelease(this.db, ctx.releaseId, (tx, releaseId) =>
+      tx.execute(sql`
+        SELECT * FROM v_entities
+        WHERE entity_key = ${entityKey}
+        LIMIT 1
+      `)
+    );
+    const [row] = result as any[];
+    return row ? this.rowToDomain(row) : null;
+  }
 }
 
 /* ------------------------------------------------------------------ */

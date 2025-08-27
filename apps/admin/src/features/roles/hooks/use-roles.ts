@@ -52,10 +52,10 @@ export function useRoles({ filters, sort, page = 1, pageSize = 20 }: UseRolesOpt
       }
 
       const response = await apiClient.get<RolesListResponse>('/roles', { params });
-      
+
       // The API returns roles array, so we need to adapt it for pagination
       const roles = response.data.roles;
-      
+
       return {
         roles,
         total: roles.length, // For now, until API supports pagination
@@ -104,12 +104,12 @@ export function useUpdateRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      id, 
-      data 
-    }: { 
-      id: number; 
-      data: UpdateRoleFormData; 
+    mutationFn: async ({
+      id,
+      data
+    }: {
+      id: number;
+      data: UpdateRoleFormData;
     }): Promise<Role> => {
       const response = await apiClient.put<Role>(`/roles/${id}`, data);
       return response.data;
